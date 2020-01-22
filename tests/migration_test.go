@@ -802,7 +802,7 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
 				By("Checking that the migrated VirtualMachineInstance console has expected output")
 				expecter, err = tests.ReLoggedInFedoraExpecter(vmi, 60)
 				defer expecter.Close()
-				Expect(err).ToNot(HaveOccurred(), "Should be able to re-login to the migrated VM")
+				Expect(err).ToNot(HaveOccurred(), "Should stay logged in after migration")
 
 				By("Checking that the service account is mounted")
 				_, err = expecter.ExpectBatch([]expect.Batcher{
