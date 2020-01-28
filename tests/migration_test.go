@@ -765,7 +765,7 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
 				By("Waiting for NFS pod to disappear")
 				tests.WaitForPodToDisappearWithTimeout(tests.NFSTargetName, 120)
 			})
-			It("[test_id:1785]  should be migrated successfully", func() {
+			FIt("[test_id:1785]  should be migrated successfully", func() {
 				// Start the VirtualMachineInstance with the PVC attached
 				By("Creating the  VMI")
 				vmi = tests.NewRandomVMIWithPVC(pvName)
