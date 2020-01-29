@@ -9,7 +9,7 @@ deploy_testing_infra=${DEPLOY_TESTING_INFRA:-false}
 csv_namespace=placeholder
 cdi_namespace=cdi
 image_pull_policy=${IMAGE_PULL_POLICY:-IfNotPresent}
-verbosity=${VERBOSITY:-2}
+verbosity=${VERBOSITY:-4}
 package_name=${PACKAGE_NAME:-kubevirt-dev}
 kubevirtci_git_hash="f5c7e4db7238ac4130c4e76698807b1c46359b7b"
 

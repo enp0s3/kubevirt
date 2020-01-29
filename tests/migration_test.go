@@ -812,7 +812,7 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
 				Expect(err).ToNot(HaveOccurred(), "Should be able to access the mounted service account file")
 
 			})
-			FIt("[test_id:2653]  should be migrated successfully, using guest agent on VM", func() {
+			It("[test_id:2653]  should be migrated successfully, using guest agent on VM", func() {
 				// Start the VirtualMachineInstance with the PVC attached
 				By("Creating the  VMI")
 				vmi = tests.NewRandomVMIWithPVC(pvName)
