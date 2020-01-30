@@ -34,7 +34,7 @@ spec:
         - --console-server-port
         - "8186"
         - -v
-        - {{.Verbosity}}
+        - "9"
         env:
         - name: NODE_NAME
           valueFrom:
