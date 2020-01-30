@@ -741,6 +741,7 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
 			var pvName string
 			var vmi *v1.VirtualMachineInstance
 			BeforeEach(func() {
+				tests.BeforeTestCleanup()
 				pvName = "test-nfs" + rand.String(48)
 				// Prepare a NFS backed PV
 				By("Starting an NFS POD")
