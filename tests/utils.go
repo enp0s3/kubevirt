@@ -175,6 +175,11 @@ const (
 	ViewServiceAccountName        = "kubevirt-view-test-sa"
 )
 
+const (
+	clockRegex  = "[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"
+	clockLayout = "15:04:05"
+)
+
 const SubresourceTestLabel = "subresource-access-test-pod"
 const namespaceKubevirt = "kubevirt"
 const kubevirtConfig = "kubevirt-config"
@@ -4187,4 +4192,37 @@ func GenerateRandomMac() (net.HardwareAddr, error) {
 		return nil, err
 	}
 	return net.HardwareAddr(append(prefix, suffix...)), nil
+}
+
+func GetVMIUptime(vmi *v1.VirtualMachineInstance) (time.Duration, error) {
+	virtClient, err := kubecli.GetKubevirtClient()
+	PanicOnError(err)
+
+	expecter, _, err := NewConsoleExpecter(virtClient, vmi, 10*time.Second)
+	if err != nil {
+		return 0, err
+	}
+
+	expecter.Send("uptime -s\n")
+	_, res, err := expecter.Expect(regexp.MustCompile(clockRegex), 10*time.Second)
+	if err != nil {
+		return 0, err
+	}
+
+	ts1, err := time.Parse(clockLayout, res[0])
+	if err != nil {
+		return 0, err
+	}
+
+	expecter.Send("date\n")
+	_, res, err = expecter.Expect(regexp.MustCompile(clockRegex), 10*time.Second)
+	if err != nil {
+		return 0, err
+	}
+	ts2, err := time.Parse(clockLayout, res[0])
+	if err != nil {
+		return 0, err
+	}
+
+	return ts2.Sub(ts1), nil
 }
