@@ -4194,27 +4194,23 @@ func GenerateRandomMac() (net.HardwareAddr, error) {
 	return net.HardwareAddr(append(prefix, suffix...)), nil
 }
 
-func GetVMIUptime(vmi *v1.VirtualMachineInstance) (time.Duration, error) {
-	virtClient, err := kubecli.GetKubevirtClient()
-	PanicOnError(err)
+func GetFedoraUptime(vmi *v1.VirtualMachineInstance, expecter expect.Expecter) (time.Duration, error) {
 
-	expecter, _, err := NewConsoleExpecter(virtClient, vmi, 10*time.Second)
-	if err != nil {
+	if err := expecter.Send("uptime -s\n"); err != nil {
 		return 0, err
 	}
-
-	expecter.Send("uptime -s\n")
 	_, res, err := expecter.Expect(regexp.MustCompile(clockRegex), 10*time.Second)
 	if err != nil {
 		return 0, err
 	}
-
 	ts1, err := time.Parse(clockLayout, res[0])
 	if err != nil {
 		return 0, err
 	}
 
-	expecter.Send("date\n")
+	if err = expecter.Send("date\n"); err != nil {
+		return 0, err
+	}
 	_, res, err = expecter.Expect(regexp.MustCompile(clockRegex), 10*time.Second)
 	if err != nil {
 		return 0, err
