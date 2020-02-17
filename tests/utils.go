@@ -175,10 +175,8 @@ const (
 	ViewServiceAccountName        = "kubevirt-view-test-sa"
 )
 
-const (
-	clockRegex  = "[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"
-	clockLayout = "15:04:05"
-)
+const epochRegex  = ".*\\.[0-9][0-9]"
+
 
 const SubresourceTestLabel = "subresource-access-test-pod"
 const namespaceKubevirt = "kubevirt"
@@ -4194,31 +4192,14 @@ func GenerateRandomMac() (net.HardwareAddr, error) {
 	return net.HardwareAddr(append(prefix, suffix...)), nil
 }
 
-func GetFedoraUptime(vmi *v1.VirtualMachineInstance, expecter expect.Expecter) (time.Duration, error) {
+func GetFedoraUptime(expecter expect.Expecter) (float64, error) {
 
-	if err := expecter.Send("uptime -s\n"); err != nil {
+	if err := expecter.Send("cat /proc/uptime\n\n"); err != nil {
 		return 0, err
 	}
-	_, res, err := expecter.Expect(regexp.MustCompile(clockRegex), 10*time.Second)
+	_, res, err := expecter.Expect(regexp.MustCompile(epochRegex), 10*time.Second)
 	if err != nil {
 		return 0, err
 	}
-	ts1, err := time.Parse(clockLayout, res[0])
-	if err != nil {
-		return 0, err
-	}
-
-	if err = expecter.Send("date\n"); err != nil {
-		return 0, err
-	}
-	_, res, err = expecter.Expect(regexp.MustCompile(clockRegex), 10*time.Second)
-	if err != nil {
-		return 0, err
-	}
-	ts2, err := time.Parse(clockLayout, res[0])
-	if err != nil {
-		return 0, err
-	}
-
-	return ts2.Sub(ts1), nil
+	return strconv.ParseFloat(res[0], 64)
 }

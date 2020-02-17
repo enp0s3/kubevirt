@@ -790,12 +790,13 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
 				expecter, err := tests.LoggedInFedoraExpecter(vmi)
 				Expect(err).ToNot(HaveOccurred(), "Should be able to login to the Fedora VM")
 
-				firstUptimeSample, err := tests.GetFedoraUptime(vmi, expecter)
+				// Increase the uptime of the VM before migration to guarantee
+				// that positive diff will indicate a non-crashed VM
+				time.Sleep(10*time.Second)
+
+				firstUptimeSample, err := tests.GetFedoraUptime(expecter)
 				Expect(err).ToNot(HaveOccurred(), "Should be able to measure the uptime from VM console")
 				expecter.Close()
-
-				// Sleep for positive diff between uptime measures
-				time.Sleep(time.Second)
 
 				// execute a migration, wait for finalized state
 				By("Starting the Migration for iteration")
@@ -814,7 +815,7 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
 				Expect(err).ToNot(HaveOccurred(), "Should be able to somehow login to the VM")
 				defer expecter.Close()
 
-				secondUptimeSample, err := tests.GetFedoraUptime(vmi, expecter)
+				secondUptimeSample, err := tests.GetFedoraUptime(expecter)
 				Expect(err).ToNot(HaveOccurred(), "Should be able to measure the uptime from VM console after live migration")
 				Expect((secondUptimeSample-firstUptimeSample) > 0).To(BeTrue(), "Uptime should increase during live migration otherwise VM crashed")
 
