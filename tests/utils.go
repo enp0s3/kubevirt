@@ -175,8 +175,6 @@ const (
 	ViewServiceAccountName        = "kubevirt-view-test-sa"
 )
 
-const epochRegex  = ".*\\.[0-9][0-9]"
-
 
 const SubresourceTestLabel = "subresource-access-test-pod"
 const namespaceKubevirt = "kubevirt"
@@ -2446,7 +2444,7 @@ func WaitForPodToDisappearWithTimeout(podName string, seconds int) {
 	EventuallyWithOffset(1, func() bool {
 		_, err := virtClient.CoreV1().Pods(NamespaceTestDefault).Get(podName, metav1.GetOptions{})
 		return errors.IsNotFound(err)
-	}, seconds, 1*time.Second).Should(BeTrue())
+	}, seconds*time.Second, 1*time.Second).Should(BeTrue())
 }
 
 func WaitForVirtualMachineToDisappearWithTimeout(vmi *v1.VirtualMachineInstance, seconds int) {
@@ -4190,16 +4188,4 @@ func GenerateRandomMac() (net.HardwareAddr, error) {
 		return nil, err
 	}
 	return net.HardwareAddr(append(prefix, suffix...)), nil
-}
-
-func GetFedoraUptime(expecter expect.Expecter) (float64, error) {
-
-	if err := expecter.Send("cat /proc/uptime\n\n"); err != nil {
-		return 0, err
-	}
-	_, res, err := expecter.Expect(regexp.MustCompile(epochRegex), 10*time.Second)
-	if err != nil {
-		return 0, err
-	}
-	return strconv.ParseFloat(res[0], 64)
 }
