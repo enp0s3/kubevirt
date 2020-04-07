@@ -497,7 +497,7 @@ var _ = Describe("Storage", func() {
 							virtClient,
 							vmiPod,
 							vmiPod.Spec.Containers[0].Name,
-							[]string{"find", "/var/run/kubevirt-private/vmi-disks/disk0/", "-name", "disk.img", "-size", "1G"},
+							[]string{"find", "/var/run/kubevirt-private/vmi-disks/disk0/", "-name", "disk.img", "-size", "+0G"},
 						)
 						By("Checking if a disk image for PVC has been created")
 						Expect(strings.Contains(output, "disk.img")).To(BeTrue())
