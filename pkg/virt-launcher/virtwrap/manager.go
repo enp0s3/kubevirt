@@ -70,6 +70,7 @@ import (
 	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/network"
 	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/stats"
 	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/util"
+	"github.com/go-xmlfmt/xmlfmt"
 )
 
 const LibvirtLocalConnectionPort = 22222
@@ -1209,7 +1210,8 @@ func (l *LibvirtDomainManager) SyncVMI(vmi *v1.VirtualMachineInstance, useEmulat
 			logger.Info("Domain defined.")
 			a, err := dom.GetXMLDesc(0)
 			if err == nil {
-				log.Log.Infof("@@@@@@@@@@@@@@@@ domain %s", a)
+				x := xmlfmt.FormatXML(a, "\t", "  ")
+				log.Log.Infof("@@@@@@@@@@@@@@@@ domain %s", x)
 			}
 		} else {
 			logger.Reason(err).Error("Getting the domain failed.")
