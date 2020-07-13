@@ -1207,6 +1207,10 @@ func (l *LibvirtDomainManager) SyncVMI(vmi *v1.VirtualMachineInstance, useEmulat
 				return nil, err
 			}
 			logger.Info("Domain defined.")
+			a, err := dom.GetXMLDesc(0)
+			if err == nil {
+				log.Log.Infof("@@@@@@@@@@@@@@@@ domain %s", a)
+			}
 		} else {
 			logger.Reason(err).Error("Getting the domain failed.")
 			return nil, err
