@@ -50,6 +50,8 @@ import (
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	libvirt "libvirt.org/libvirt-go"
 
+	"github.com/go-xmlfmt/xmlfmt"
+
 	v1 "kubevirt.io/client-go/api/v1"
 	"kubevirt.io/client-go/log"
 	cloudinit "kubevirt.io/kubevirt/pkg/cloud-init"
@@ -70,7 +72,6 @@ import (
 	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/network"
 	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/stats"
 	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/util"
-	"github.com/go-xmlfmt/xmlfmt"
 )
 
 const LibvirtLocalConnectionPort = 22222
