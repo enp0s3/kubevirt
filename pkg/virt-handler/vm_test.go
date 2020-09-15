@@ -58,6 +58,7 @@ import (
 	"kubevirt.io/client-go/log"
 	"kubevirt.io/client-go/precond"
 	diskutils "kubevirt.io/kubevirt/pkg/ephemeral-disk-utils"
+	migrations "kubevirt.io/kubevirt/pkg/util/migrations"
 	"kubevirt.io/kubevirt/pkg/testutils"
 	virtcache "kubevirt.io/kubevirt/pkg/virt-handler/cache"
 	cmdclient "kubevirt.io/kubevirt/pkg/virt-handler/cmd-client"
@@ -1381,7 +1382,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 				},
 			}
 
-			blockMigrate, err := controller.checkVolumesForMigration(vmi)
+			blockMigrate, err := migrations.CheckVolumesForMigration(controller.clientset, vmi)
 			Expect(blockMigrate).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -1410,7 +1411,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 			}
 
 			virtClient.CoreV1().PersistentVolumeClaims(vmi.Namespace).Create(testBlockPvc)
-			blockMigrate, err := controller.checkVolumesForMigration(vmi)
+			blockMigrate, err := migrations.CheckVolumesForMigration(controller.clientset, vmi)
 			Expect(blockMigrate).To(BeFalse())
 			Expect(err).To(BeNil())
 		})
@@ -1441,7 +1442,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 			testBlockPvc.Spec.AccessModes = []k8sv1.PersistentVolumeAccessMode{k8sv1.ReadWriteOnce}
 
 			virtClient.CoreV1().PersistentVolumeClaims(vmi.Namespace).Create(testBlockPvc)
-			blockMigrate, err := controller.checkVolumesForMigration(vmi)
+			blockMigrate, err := migrations.CheckVolumesForMigration(controller.clientset, vmi)
 			Expect(blockMigrate).To(BeTrue())
 			Expect(err).To(Equal(fmt.Errorf("cannot migrate VMI with non-shared PVCs")))
 		})
@@ -1472,7 +1473,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 			testBlockPvc.Spec.AccessModes = []k8sv1.PersistentVolumeAccessMode{k8sv1.ReadWriteOnce}
 
 			virtClient.CoreV1().PersistentVolumeClaims(vmi.Namespace).Create(testBlockPvc)
-			blockMigrate, err := controller.checkVolumesForMigration(vmi)
+			blockMigrate, err := migrations.CheckVolumesForMigration(controller.clientset, vmi)
 			Expect(blockMigrate).To(BeTrue())
 			Expect(err).To(Equal(fmt.Errorf("cannot migrate VMI with non-shared PVCs")))
 		})
@@ -1519,7 +1520,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 			}
 
 			virtClient.CoreV1().PersistentVolumeClaims(vmi.Namespace).Create(testBlockPvc)
-			blockMigrate, err := controller.checkVolumesForMigration(vmi)
+			blockMigrate, err := migrations.CheckVolumesForMigration(controller.clientset, vmi)
 			Expect(blockMigrate).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -1566,7 +1567,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 			}
 
 			virtClient.CoreV1().PersistentVolumeClaims(vmi.Namespace).Create(testBlockPvc)
-			blockMigrate, err := controller.checkVolumesForMigration(vmi)
+			blockMigrate, err := migrations.CheckVolumesForMigration(controller.clientset, vmi)
 			Expect(blockMigrate).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -1597,7 +1598,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 				},
 			}
 
-			blockMigrate, err := controller.checkVolumesForMigration(vmi)
+			blockMigrate, err := migrations.CheckVolumesForMigration(controller.clientset, vmi)
 			Expect(blockMigrate).To(BeFalse())
 			Expect(err).To(BeNil())
 		})
@@ -1648,7 +1649,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 				},
 			}
 
-			blockMigrate, err := controller.checkVolumesForMigration(vmi)
+			blockMigrate, err := migrations.CheckVolumesForMigration(controller.clientset, vmi)
 			Expect(blockMigrate).To(BeTrue())
 			Expect(err).To(Equal(fmt.Errorf("cannot migrate VMI with non-shared HostDisk")))
 		})
@@ -1673,7 +1674,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 					},
 				}
 
-				err := controller.checkNetworkInterfacesForMigration(vmi)
+				err := migrations.CheckNetworkInterfacesForMigration(vmi)
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -1696,7 +1697,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 					},
 				}
 
-				err := controller.checkNetworkInterfacesForMigration(vmi)
+				err := migrations.CheckNetworkInterfacesForMigration(vmi)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -1719,7 +1720,7 @@ var _ = Describe("VirtualMachineInstance", func() {
 					},
 				}
 
-				err := controller.checkNetworkInterfacesForMigration(vmi)
+				err := migrations.CheckNetworkInterfacesForMigration(vmi)
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})

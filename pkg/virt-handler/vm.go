@@ -36,7 +36,6 @@ import (
 	"time"
 
 	k8sv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -57,7 +56,7 @@ import (
 	hostdisk "kubevirt.io/kubevirt/pkg/host-disk"
 	virtutil "kubevirt.io/kubevirt/pkg/util"
 	clusterutils "kubevirt.io/kubevirt/pkg/util/cluster"
-	pvcutils "kubevirt.io/kubevirt/pkg/util/types"
+	migrations "kubevirt.io/kubevirt/pkg/util/migrations"
 	virtconfig "kubevirt.io/kubevirt/pkg/virt-config"
 	virtcache "kubevirt.io/kubevirt/pkg/virt-handler/cache"
 	cmdclient "kubevirt.io/kubevirt/pkg/virt-handler/cmd-client"
@@ -727,38 +726,11 @@ func (d *VirtualMachineController) updateVMIStatus(vmi *v1.VirtualMachineInstanc
 
 	// Cacluate whether the VM is migratable
 	if !condManager.HasCondition(vmi, v1.VirtualMachineInstanceIsMigratable) {
-		isBlockMigration, err := d.checkVolumesForMigration(vmi)
-		liveMigrationCondition := v1.VirtualMachineInstanceCondition{
-			Type:   v1.VirtualMachineInstanceIsMigratable,
-			Status: k8sv1.ConditionTrue,
-		}
-		if err != nil {
-			liveMigrationCondition.Status = k8sv1.ConditionFalse
-			liveMigrationCondition.Message = err.Error()
-			liveMigrationCondition.Reason = v1.VirtualMachineInstanceReasonDisksNotMigratable
-			vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
-		}
-		err = d.checkNetworkInterfacesForMigration(vmi)
-		if err != nil {
-			liveMigrationCondition = v1.VirtualMachineInstanceCondition{
-				Type:    v1.VirtualMachineInstanceIsMigratable,
-				Status:  k8sv1.ConditionFalse,
-				Message: err.Error(),
-				Reason:  v1.VirtualMachineInstanceReasonInterfaceNotMigratable,
-			}
-			vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
-		}
-		if liveMigrationCondition.Status == k8sv1.ConditionTrue {
-			vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
-		}
-
-		// Set VMI Migration Method
-		if isBlockMigration {
-			vmi.Status.MigrationMethod = v1.BlockMigration
-		} else {
-			vmi.Status.MigrationMethod = v1.LiveMigration
-		}
+		migrationType, conditions, _ := migrations.DetermineMigrationCapability(d.clientset, vmi)
+		vmi.Status.Conditions = append(vmi.Status.Conditions, conditions...)
+		vmi.Status.MigrationMethod = migrationType
 	}
+
 	// Update the condition when GA is connected
 	channelConnected := false
 	if domain != nil {
@@ -1783,55 +1755,6 @@ func (d *VirtualMachineController) isPreMigrationTarget(vmi *v1.VirtualMachineIn
 	}
 
 	return false
-}
-
-func (d *VirtualMachineController) checkNetworkInterfacesForMigration(vmi *v1.VirtualMachineInstance) error {
-	networks := map[string]*v1.Network{}
-	for _, network := range vmi.Spec.Networks {
-		networks[network.Name] = network.DeepCopy()
-	}
-	for _, iface := range vmi.Spec.Domain.Devices.Interfaces {
-		if iface.Masquerade == nil && networks[iface.Name].Pod != nil {
-			return fmt.Errorf("cannot migrate VMI which does not use masquerade to connect to the pod network")
-		}
-	}
-	return nil
-}
-
-func (d *VirtualMachineController) checkVolumesForMigration(vmi *v1.VirtualMachineInstance) (blockMigrate bool, err error) {
-	// Check if all VMI volumes can be shared between the source and the destination
-	// of a live migration. blockMigrate will be returned as false, only if all volumes
-	// are shared and the VMI has no local disks
-	// Some combinations of disks makes the VMI no suitable for live migration.
-	// A relevant error will be returned in this case.
-	for _, volume := range vmi.Spec.Volumes {
-		volSrc := volume.VolumeSource
-		if volSrc.PersistentVolumeClaim != nil || volSrc.DataVolume != nil {
-			var volName string
-			if volSrc.PersistentVolumeClaim != nil {
-				volName = volSrc.PersistentVolumeClaim.ClaimName
-			} else {
-				volName = volSrc.DataVolume.Name
-			}
-			_, shared, err := pvcutils.IsSharedPVCFromClient(d.clientset, vmi.Namespace, volName)
-			if errors.IsNotFound(err) {
-				return blockMigrate, fmt.Errorf("persistentvolumeclaim %v not found", volName)
-			} else if err != nil {
-				return blockMigrate, err
-			}
-			if !shared {
-				return true, fmt.Errorf("cannot migrate VMI with non-shared PVCs")
-			}
-		} else if volSrc.HostDisk != nil {
-			shared := volSrc.HostDisk.Shared != nil && *volSrc.HostDisk.Shared
-			if !shared {
-				return true, fmt.Errorf("cannot migrate VMI with non-shared HostDisk")
-			}
-		} else {
-			blockMigrate = true
-		}
-	}
-	return
 }
 
 func (d *VirtualMachineController) isMigrationSource(vmi *v1.VirtualMachineInstance) bool {
