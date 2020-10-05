@@ -728,37 +728,7 @@ func (d *VirtualMachineController) updateVMIStatus(vmi *v1.VirtualMachineInstanc
 
 	// Cacluate whether the VM is migratable
 	if !condManager.HasCondition(vmi, v1.VirtualMachineInstanceIsMigratable) {
-		isBlockMigration, err := d.checkVolumesForMigration(vmi)
-		liveMigrationCondition := v1.VirtualMachineInstanceCondition{
-			Type:   v1.VirtualMachineInstanceIsMigratable,
-			Status: k8sv1.ConditionTrue,
-		}
-		if err != nil {
-			liveMigrationCondition.Status = k8sv1.ConditionFalse
-			liveMigrationCondition.Message = err.Error()
-			liveMigrationCondition.Reason = v1.VirtualMachineInstanceReasonDisksNotMigratable
-			vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
-		}
-		err = d.checkNetworkInterfacesForMigration(vmi)
-		if err != nil {
-			liveMigrationCondition = v1.VirtualMachineInstanceCondition{
-				Type:    v1.VirtualMachineInstanceIsMigratable,
-				Status:  k8sv1.ConditionFalse,
-				Message: err.Error(),
-				Reason:  v1.VirtualMachineInstanceReasonInterfaceNotMigratable,
-			}
-			vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
-		}
-		if liveMigrationCondition.Status == k8sv1.ConditionTrue {
-			vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
-		}
-
-		// Set VMI Migration Method
-		if isBlockMigration {
-			vmi.Status.MigrationMethod = v1.BlockMigration
-		} else {
-			vmi.Status.MigrationMethod = v1.LiveMigration
-		}
+		d.isMigratable(vmi)
 	}
 	// Update the condition when GA is connected
 	channelConnected := false
@@ -2281,6 +2251,79 @@ func (d *VirtualMachineController) setVMIGuestTime(vmi *v1.VirtualMachineInstanc
 		return err
 	}
 	return nil
+}
+
+func (d *VirtualMachineController) checkCPUForMigration(vmi *v1.VirtualMachineInstance) error {
+	if vmi.Spec.Domain.CPU == nil {
+		return nil
+	}
+
+	model := vmi.Spec.Domain.CPU.Model
+	switch model {
+	case v1.CPUModeHostModel:
+		if !d.clusterConfig.MigrationOfHostModelEnabled() {
+			return fmt.Errorf("cannot migrate VMI with current CPU model: %s", model)
+		}
+	case v1.CPUModeHostPassthrough:
+		if !d.clusterConfig.MigrationOfHostPassthroughEnabled() {
+			return fmt.Errorf("cannot migrate VMI with current CPU model: %s", model)
+		}
+	}
+
+	return nil
+}
+
+func (d *VirtualMachineController) isMigratable(vmi *v1.VirtualMachineInstance) {
+	liveMigrationPossible := true
+
+	if err := d.checkCPUForMigration(vmi); err != nil {
+		liveMigrationCondition := v1.VirtualMachineInstanceCondition{
+			Type:    v1.VirtualMachineInstanceIsMigratable,
+			Status:  k8sv1.ConditionFalse,
+			Message: err.Error(),
+			Reason:  v1.VirtualMachineInstanceReasonCPUNotMigratable,
+		}
+		vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
+		liveMigrationPossible = false
+	}
+
+	isBlockMigration, err := d.checkVolumesForMigration(vmi)
+	if err != nil {
+		liveMigrationCondition := v1.VirtualMachineInstanceCondition{
+			Type:    v1.VirtualMachineInstanceIsMigratable,
+			Status:  k8sv1.ConditionFalse,
+			Message: err.Error(),
+			Reason:  v1.VirtualMachineInstanceReasonDisksNotMigratable,
+		}
+		vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
+		liveMigrationPossible = false
+	}
+
+	err = d.checkNetworkInterfacesForMigration(vmi)
+	if err != nil {
+		liveMigrationCondition := v1.VirtualMachineInstanceCondition{
+			Type:    v1.VirtualMachineInstanceIsMigratable,
+			Status:  k8sv1.ConditionFalse,
+			Message: err.Error(),
+			Reason:  v1.VirtualMachineInstanceReasonInterfaceNotMigratable,
+		}
+		vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
+		liveMigrationPossible = false
+	}
+
+	if liveMigrationPossible {
+		liveMigrationCondition := v1.VirtualMachineInstanceCondition{
+			Type:   v1.VirtualMachineInstanceIsMigratable,
+			Status: k8sv1.ConditionTrue,
+		}
+		vmi.Status.Conditions = append(vmi.Status.Conditions, liveMigrationCondition)
+		// Set VMI Migration Method
+		if isBlockMigration {
+			vmi.Status.MigrationMethod = v1.BlockMigration
+		} else {
+			vmi.Status.MigrationMethod = v1.LiveMigration
+		}
+	}
 }
 
 func isACPIEnabled(vmi *v1.VirtualMachineInstance, domain *api.Domain) bool {

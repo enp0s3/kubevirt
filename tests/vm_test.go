@@ -966,7 +966,7 @@ var _ = Describe("[rfe_id:1177][crit:medium][vendor:cnv-qe@redhat.com][level:com
 
 				})
 
-				It("[test_id:4119]should migrate a running VM", func() {
+				FIt("[test_id:4119]should migrate a running VM", func() {
 					nodes := tests.GetAllSchedulableNodes(virtClient)
 					if len(nodes.Items) < 2 {
 						Skip("Migration tests require at least 2 nodes")

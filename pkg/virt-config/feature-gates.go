@@ -34,6 +34,11 @@ const (
 	SnapshotGate          = "Snapshot"
 	HostDiskGate          = "HostDisk"
 	VirtIOFSGate          = "ExperimentalVirtiofsSupport"
+	// 	CPUMigrationGate allows users to block migrations for virtual machines with host-model
+	MigratableHostModel = "MigratableHostModel"
+	// MigratableHostPassthrough allow to use host-passthrough for live migration
+	// Note: Cluster should be homogeneous
+	MigratableHostPassthrough = "MigratableHostPassthrough"
 )
 
 func (c *ClusterConfig) isFeatureGateEnabled(featureGate string) bool {
@@ -83,4 +88,12 @@ func (config *ClusterConfig) HostDiskEnabled() bool {
 
 func (config *ClusterConfig) VirtiofsEnabled() bool {
 	return config.isFeatureGateEnabled(VirtIOFSGate)
+}
+
+func (config *ClusterConfig) MigrationOfHostPassthroughEnabled() bool {
+	return config.isFeatureGateEnabled(MigratableHostPassthrough)
+}
+
+func (config *ClusterConfig) MigrationOfHostModelEnabled() bool {
+	return config.isFeatureGateEnabled(MigratableHostModel)
 }
