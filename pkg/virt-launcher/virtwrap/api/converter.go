@@ -1388,6 +1388,25 @@ func Convert_v1_VirtualMachine_To_api_Domain(vmi *v1.VirtualMachineInstance, dom
 		}
 	}
 
+	if domain.Spec.QEMUCmd == nil {
+		domain.Spec.QEMUCmd = &Commandline{}
+	}
+
+	if domain.Spec.QEMUCmd.QEMUArg == nil {
+		domain.Spec.QEMUCmd.QEMUArg = make([]Arg, 0)
+	}
+	//	<qemu:commandline>
+	// <qemu:arg value='-chardev'/>
+	//	<qemu:arg value='file,id=firmwarelog,path=/tmp/qemu-firmware.log'/>
+	//	<qemu:arg value='-device'/>
+	//	<qemu:arg value='isa-debugcon,iobase=0x402,chardev=firmwarelog'/>
+	//	</qemu:commandline>
+	//	</domain>
+	domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, Arg{Value: fmt.Sprintf("-chardev")})
+	domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, Arg{Value: fmt.Sprintf("file,id=firmwarelog,path=/tmp/qemu-firmware.log")})
+	domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, Arg{Value: fmt.Sprintf("-device")})
+	domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, Arg{Value: fmt.Sprintf("isa-debugcon,iobase=0x402,chardev=firmwarelog")})
+
 	return nil
 }
 
