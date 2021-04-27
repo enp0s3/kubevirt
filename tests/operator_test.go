@@ -397,15 +397,13 @@ var _ = Describe("[Serial][sig-operator]Operator", func() {
 		patchKvInfra = func(name string, infra *v1.ComponentConfig) {
 			kv := copyOriginalKv()
 			verb := "add"
+
 			if infra == nil {
 				verb = "remove"
 			}
 
 			if kv.Spec.Infra != nil {
 				verb = "replace"
-			}
-			if infra == nil {
-				verb = "remove"
 			}
 
 			patchKvNodePlacement(name, "infra", verb, infra)
@@ -414,15 +412,13 @@ var _ = Describe("[Serial][sig-operator]Operator", func() {
 		patchKvWorkloads = func(name string, workloads *v1.ComponentConfig) {
 			kv := copyOriginalKv()
 			verb := "add"
+
 			if workloads == nil {
 				verb = "remove"
 			}
 
 			if kv.Spec.Workloads != nil {
 				verb = "replace"
-			}
-			if workloads == nil {
-				verb = "remove"
 			}
 
 			patchKvNodePlacement(name, "workloads", verb, workloads)
