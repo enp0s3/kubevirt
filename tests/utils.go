@@ -714,8 +714,10 @@ func AdjustKubeVirtResource() {
 
 	kv := util2.GetCurrentKv(virtClient)
 	originalKV = kv.DeepCopy()
+	e2eKv = kv.DeepCopy()
 
 	KubeVirtDefaultConfig = originalKV.Spec.Configuration
+
 
 	if !flags.ApplyDefaulte2eConfiguration {
 		return
