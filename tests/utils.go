@@ -804,7 +804,7 @@ func RestoreKubevirt(kv *v1.KubeVirt) {
 	util2.PanicOnError(err)
 	currentKv := util2.GetCurrentKv(virtClient)
 
-	if reflect.DeepEqual(kv, currentKv) {
+	if reflect.DeepEqual(kv.Spec, currentKv.Spec) {
 		return
 	}
 
