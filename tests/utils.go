@@ -2182,6 +2182,18 @@ func NewRandomFedoraVMIWitGuestAgent() *v1.VirtualMachineInstance {
 	)
 }
 
+func NewRandomFedoraVMIWithBlacklistGuestAgent(commands string) *v1.VirtualMachineInstance {
+	networkData, err := libnet.CreateDefaultCloudInitNetworkData()
+	Expect(err).NotTo(HaveOccurred())
+
+	return libvmi.NewTestToolingFedora(
+		libvmi.WithInterface(libvmi.InterfaceDeviceWithMasqueradeBinding()),
+		libvmi.WithNetwork(v1.DefaultPodNetwork()),
+		libvmi.WithCloudInitNoCloudUserData(GetFedoraToolsGuestAgentBlacklistUserData(commands), false),
+		libvmi.WithCloudInitNoCloudNetworkData(networkData, false),
+	)
+}
+
 func AddPVCFS(vmi *v1.VirtualMachineInstance, name string, claimName string) *v1.VirtualMachineInstance {
 	vmi.Spec.Domain.Devices.Filesystems = append(vmi.Spec.Domain.Devices.Filesystems, v1.Filesystem{
 		Name:     name,

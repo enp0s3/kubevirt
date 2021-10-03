@@ -58,7 +58,7 @@ const (
 	SmbiosConfigDefaultProduct                      = "None"
 	DefaultPermitBridgeInterfaceOnPodNetwork        = true
 	DefaultSELinuxLauncherType                      = "virt_launcher.process"
-	SupportedGuestAgentVersions                     = "2.*,3.*,4.*"
+	SupportedGuestAgentVersions                     = "2.*,3.*,4.*, 5.*"
 	DefaultOVMFPath                                 = "/usr/share/OVMF"
 	DefaultMemBalloonStatsPeriod             uint32 = 10
 	DefaultCPUAllocationRatio                       = 10
