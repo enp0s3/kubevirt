@@ -63,6 +63,13 @@ func newFedora(containerDisk cd.ContainerDisk, opts ...Option) *kvirtv1.VirtualM
 	return New(RandName(DefaultVmiName), opts...)
 }
 
+// NewTestToolingFedora instantiates a new Fedora based VMI configuration,
+// building its extra properties based on the specified With* options.
+// This image has tooling for the guest agent, stress, and more
+func NewTestToolingFedora(opts ...Option) *kvirtv1.VirtualMachineInstance {
+	return newFedora(cd.ContainerDiskFedoraTestTooling, opts...)
+}
+
 // NewCirros instantiates a new CirrOS based VMI configuration
 func NewCirros(opts ...Option) *kvirtv1.VirtualMachineInstance {
 	cirrosOpts := []Option{

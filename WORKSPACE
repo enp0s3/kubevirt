@@ -382,6 +382,15 @@ container_pull(
     repository = "kubevirtci/nfs-ganesha",  # see https://github.com/slintes/docker-nfs-ganesha
 )
 
+# Pull fedora container-disk preconfigured with ci tooling
+# like stress and qemu guest agent pre-configured
+container_pull(
+    name = "fedora_with_test_tooling",
+    digest = "sha256:9ec3e137bff093597d192f5a4e346f25b614c3a94216b857de0e3d75b68bfb17",
+    registry = "quay.io",
+    repository = "kubevirt/fedora-with-test-tooling",
+)
+
 load(
     "@io_bazel_rules_docker//go:image.bzl",
     _go_image_repos = "repositories",

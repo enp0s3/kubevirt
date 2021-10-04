@@ -81,7 +81,7 @@ var _ = Describe("Guest Access Credentials", func() {
 	Context("with qemu guest agent", func() {
 		It("should propagate public ssh keys", func() {
 			secretID := "my-pub-key"
-			vmi := tests.NewRandomFedoraVMIWitGuestAgent()
+			vmi := tests.NewRandomFedoraVMIWithGuestAgent()
 			vmi.Namespace = tests.NamespaceTestDefault
 			vmi.Spec.AccessCredentials = []v1.AccessCredential{
 				{
@@ -161,7 +161,7 @@ var _ = Describe("Guest Access Credentials", func() {
 
 		It("should propagate user password", func() {
 			secretID := "my-user-pass"
-			vmi := tests.NewRandomFedoraVMIWitGuestAgent()
+			vmi := tests.NewRandomFedoraVMIWithGuestAgent()
 			vmi.Namespace = tests.NamespaceTestDefault
 
 			vmi.Spec.AccessCredentials = []v1.AccessCredential{
@@ -266,7 +266,7 @@ var _ = Describe("Guest Access Credentials", func() {
 					"my-key1": []byte(key1),
 				},
 			}
-			_, err := virtClient.CoreV1().Secrets(vmi.Namespace).Create(context.Background(), &secret, metav1.CreateOptions{})
+			_, err := virtClient.CoreV1().Secrets(vmi.Namespace).Create(&secret)
 			Expect(err).To(BeNil())
 
 			LaunchVMI(vmi)
@@ -327,7 +327,7 @@ var _ = Describe("Guest Access Credentials", func() {
 					"fedora": []byte(customPassword),
 				},
 			}
-			_, err := virtClient.CoreV1().Secrets(vmi.Namespace).Create(context.Background(), &secret, metav1.CreateOptions{})
+			_, err := virtClient.CoreV1().Secrets(vmi.Namespace).Create(&secret)
 			Expect(err).To(BeNil())
 
 			LaunchVMI(vmi)

@@ -1,6 +1,9 @@
 package agentpoller
 
 import (
+	v1 "kubevirt.io/client-go/api/v1"
+	"kubevirt.io/client-go/log"
+
 	"encoding/json"
 	"regexp"
 
@@ -72,7 +75,7 @@ type Filesystem struct {
 // AgentInfo from the guest VM serves the purpose
 // of checking the GA presence and version compatibility
 type AgentInfo struct {
-	Version string `json:"version"`
+	Version           string                     `json:"version"`
 	SupportedCommands []v1.GuestAgentCommandInfo `json:"supported_commands,omitempty"`
 }
 

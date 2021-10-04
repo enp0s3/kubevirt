@@ -124,10 +124,6 @@ const (
 
 const (
 	AlpineHttpUrl = iota
-	GuestAgentHttpUrl
-	PixmanUrl
-	StressHttpUrl
-	DmidecodeHttpUrl
 	DummyFileHttpUrl
 	CirrosHttpUrl
 	VirtWhatCpuidHelperHttpUrl
@@ -2019,6 +2015,18 @@ func NewRandomVMIWithEphemeralDiskHighMemory(containerImage string) *v1.VirtualM
 	return vmi
 }
 
+func GetFedoraToolsGuestAgentBlacklistUserData(commands string) string {
+	return fmt.Sprintf(`#!/bin/bash
+            echo "fedora" |passwd fedora --stdin
+            sudo setenforce Permissive
+            sudo cp /home/fedora/qemu-guest-agent.service /lib/systemd/system/
+            echo -e "\n\nBLACKLIST_RPC=%s" | sudo tee -a /etc/sysconfig/qemu-ga
+            sudo systemctl daemon-reload
+            sudo systemctl start qemu-guest-agent
+            sudo systemctl enable qemu-guest-agent
+`, commands)
+}
+
 func NewRandomVMIWithEphemeralDiskAndUserdataHighMemory(containerImage string, userData string) *v1.VirtualMachineInstance {
 	vmi := NewRandomVMIWithEphemeralDiskAndUserdata(containerImage, userData)
 
@@ -2170,14 +2178,14 @@ func AddEphemeralCdrom(vmi *v1.VirtualMachineInstance, name string, bus string, 
 	return vmi
 }
 
-func NewRandomFedoraVMIWitGuestAgent() *v1.VirtualMachineInstance {
+func NewRandomFedoraVMIWithGuestAgent() *v1.VirtualMachineInstance {
 	networkData, err := libnet.CreateDefaultCloudInitNetworkData()
 	Expect(err).NotTo(HaveOccurred())
 
-	return libvmi.NewFedora(
+	return libvmi.NewTestToolingFedora(
 		libvmi.WithInterface(libvmi.InterfaceDeviceWithMasqueradeBinding()),
 		libvmi.WithNetwork(v1.DefaultPodNetwork()),
-		libvmi.WithCloudInitNoCloudUserData(GetGuestAgentUserData(), false),
+		libvmi.WithCloudInitNoCloudUserData(GetFedoraToolsGuestAgentUserData(), false),
 		libvmi.WithCloudInitNoCloudNetworkData(networkData, false),
 	)
 }
@@ -2213,7 +2221,7 @@ func AddPVCFS(vmi *v1.VirtualMachineInstance, name string, claimName string) *v1
 
 func NewRandomVMIWithFSFromDataVolume(dataVolumeName string) *v1.VirtualMachineInstance {
 	vmi := NewRandomVMI()
-	containerImage := cd.ContainerDiskFor(cd.ContainerDiskFedora)
+	containerImage := cd.ContainerDiskFor(cd.ContainerDiskFedoraTestTooling)
 	AddEphemeralDisk(vmi, "disk0", "virtio", containerImage)
 	vmi.Spec.Domain.Devices.Filesystems = append(vmi.Spec.Domain.Devices.Filesystems, v1.Filesystem{
 		Name:     "disk1",
@@ -2233,48 +2241,51 @@ func NewRandomVMIWithFSFromDataVolume(dataVolumeName string) *v1.VirtualMachineI
 func NewRandomVMIWithPVCFS(claimName string) *v1.VirtualMachineInstance {
 	vmi := NewRandomVMI()
 	vmi.Spec.Domain.Resources.Requests[k8sv1.ResourceMemory] = resource.MustParse("64M")
-	containerImage := cd.ContainerDiskFor(cd.ContainerDiskFedora)
+	containerImage := cd.ContainerDiskFor(cd.ContainerDiskFedoraTestTooling)
 	AddEphemeralDisk(vmi, "disk0", "virtio", containerImage)
 	vmi = AddPVCFS(vmi, "disk1", claimName)
 	return vmi
 }
 
 func NewRandomFedoraVMIWithDmidecode() *v1.VirtualMachineInstance {
-	dmidecodeUserData := fmt.Sprintf(`#!/bin/bash
-	    echo "fedora" |passwd fedora --stdin
-	    mkdir -p /usr/local/bin
-	    curl %s > /usr/local/bin/dmidecode
-	    chmod +x /usr/local/bin/dmidecode
-	`, GetUrl(DmidecodeHttpUrl))
-	vmi := NewRandomVMIWithEphemeralDiskAndUserdataHighMemory(cd.ContainerDiskFor(cd.ContainerDiskFedora), dmidecodeUserData)
+	userData := fmt.Sprintf(`#!/bin/bash
+	    echo "fedora" |passwd fedora --stdin`)
+	vmi := NewRandomVMIWithEphemeralDiskAndUserdataHighMemory(cd.ContainerDiskFor(cd.ContainerDiskFedoraTestTooling), userData)
 	return vmi
 }
 
 func NewRandomFedoraVMIWithVirtWhatCpuidHelper() *v1.VirtualMachineInstance {
 	userData := fmt.Sprintf(`#!/bin/bash
-	    echo "fedora" |passwd fedora --stdin
-	    mkdir -p /usr/local/bin
-	    curl %s > /usr/local/bin/virt-what-cpuid-helper
-	    chmod +x /usr/local/bin/virt-what-cpuid-helper
-	`, GetUrl(VirtWhatCpuidHelperHttpUrl))
-	vmi := NewRandomVMIWithEphemeralDiskAndUserdataHighMemory(cd.ContainerDiskFor(cd.ContainerDiskFedora), userData)
+	    echo "fedora" |passwd fedora --stdin`)
+	vmi := NewRandomVMIWithEphemeralDiskAndUserdataHighMemory(cd.ContainerDiskFor(cd.ContainerDiskFedoraTestTooling), userData)
 	return vmi
 }
 
-func GetGuestAgentUserData() string {
-	guestAgentUrl := GetUrl(GuestAgentHttpUrl)
-	return fmt.Sprintf(`#!/bin/bash
-                echo "fedora" |passwd fedora --stdin
-                mkdir -p /usr/local/bin
-                for i in {1..20}; do curl -I %s | grep "200 OK" && break || sleep 0.1; done
-                curl %s > /usr/local/bin/qemu-ga
-                chmod +x /usr/local/bin/qemu-ga
-                curl %s > /lib64/libpixman-1.so.0
-                curl %s > /usr/local/bin/stress
-                chmod +x /usr/local/bin/stress
-                setenforce 0
-                systemd-run --unit=guestagent /usr/local/bin/qemu-ga
-                `, guestAgentUrl, guestAgentUrl, GetUrl(PixmanUrl), GetUrl(StressHttpUrl))
+//func GetGuestAgentUserData() string {
+//	guestAgentUrl := GetUrl(GuestAgentHttpUrl)
+//	return fmt.Sprintf(`#!/bin/bash
+//                echo "fedora" |passwd fedora --stdin
+//                mkdir -p /usr/local/bin
+//                for i in {1..20}; do curl -I %s | grep "200 OK" && break || sleep 0.1; done
+//                curl %s > /usr/local/bin/qemu-ga
+//                chmod +x /usr/local/bin/qemu-ga
+//                curl %s > /lib64/libpixman-1.so.0
+//                curl %s > /usr/local/bin/stress
+//                chmod +x /usr/local/bin/stress
+//                setenforce 0
+//                systemd-run --unit=guestagent /usr/local/bin/qemu-ga
+//                `, guestAgentUrl, guestAgentUrl, GetUrl(PixmanUrl), GetUrl(StressHttpUrl))
+//}
+
+func GetFedoraToolsGuestAgentUserData() string {
+	return `#!/bin/bash
+            echo "fedora" |passwd fedora --stdin
+            sudo setenforce Permissive
+	    sudo cp /home/fedora/qemu-guest-agent.service /lib/systemd/system/
+	    sudo systemctl daemon-reload
+            sudo systemctl start qemu-guest-agent
+            sudo systemctl enable qemu-guest-agent
+`
 }
 
 func NewRandomVMIWithEphemeralDiskAndUserdata(containerImage string, userData string) *v1.VirtualMachineInstance {
@@ -4553,14 +4564,6 @@ func GetUrl(urlIndex int) string {
 	switch urlIndex {
 	case AlpineHttpUrl:
 		str = fmt.Sprintf("http://cdi-http-import-server.%s/images/alpine.iso", flags.KubeVirtInstallNamespace)
-	case GuestAgentHttpUrl:
-		str = fmt.Sprintf("http://cdi-http-import-server.%s/qemu-ga", flags.KubeVirtInstallNamespace)
-	case PixmanUrl:
-		str = fmt.Sprintf("http://cdi-http-import-server.%s/libpixman-1.so.0", flags.KubeVirtInstallNamespace)
-	case StressHttpUrl:
-		str = fmt.Sprintf("http://cdi-http-import-server.%s/stress", flags.KubeVirtInstallNamespace)
-	case DmidecodeHttpUrl:
-		str = fmt.Sprintf("http://cdi-http-import-server.%s/dmidecode", flags.KubeVirtInstallNamespace)
 	case DummyFileHttpUrl:
 		str = fmt.Sprintf("http://cdi-http-import-server.%s/dummy.file", flags.KubeVirtInstallNamespace)
 	case CirrosHttpUrl:
