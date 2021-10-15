@@ -68,35 +68,40 @@ func (h *KubeApiHealthzVersion) GetVersion() (v interface{}) {
    KubeApiHealthzVersion.Clear() when it encounters an error.
 */
 
-func KubeConnectionHealthzFuncFactory(clusterConfig *virtconfig.ClusterConfig, hVersion *KubeApiHealthzVersion) func(_ *restful.Request, response *restful.Response) {
+type KubeConnectionHealthzParams struct {
+	ClusterConfig *virtconfig.ClusterConfig
+	HVersion      *KubeApiHealthzVersion
+}
+
+func KubeConnectionHealthzFuncFactory(params *KubeConnectionHealthzParams) restful.RouteFunction {
 	return func(_ *restful.Request, response *restful.Response) {
 		res := map[string]interface{}{}
-		var version = hVersion.GetVersion()
+		var version = params.HVersion.GetVersion()
 
 		if version == nil {
 			cli, err := kubecli.GetKubevirtClient()
 			if err != nil {
-				unhealthy(err, clusterConfig, response)
+				unhealthy(err, params.ClusterConfig, response)
 				return
 			}
 
 			body, err := cli.CoreV1().RESTClient().Get().AbsPath("/version").Do(context.Background()).Raw()
 			if err != nil {
-				unhealthy(err, clusterConfig, response)
+				unhealthy(err, params.ClusterConfig, response)
 				return
 			}
 
 			err = json.Unmarshal(body, &version)
 			if err != nil {
-				unhealthy(err, clusterConfig, response)
+				unhealthy(err, params.ClusterConfig, response)
 				return
 			}
 
-			hVersion.Update(version)
+			params.HVersion.Update(version)
 		}
 
 		res["apiserver"] = map[string]interface{}{"connectivity": "ok", "version": version}
-		res["config-resource-version"] = clusterConfig.GetResourceVersion()
+		res["config-resource-version"] = params.ClusterConfig.GetResourceVersion()
 		response.WriteHeaderAndJson(http.StatusOK, res, restful.MIME_JSON)
 		return
 	}
