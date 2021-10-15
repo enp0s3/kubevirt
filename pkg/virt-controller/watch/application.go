@@ -28,6 +28,8 @@ import (
 	"runtime"
 	"time"
 
+	"kubevirt.io/kubevirt/pkg/monitoring/profiler"
+
 	"github.com/emicklei/go-restful"
 	vsv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,9 +49,6 @@ import (
 
 	"kubevirt.io/kubevirt/pkg/virt-controller/watch/topology"
 
-	"kubevirt.io/kubevirt/pkg/healthz"
-	"kubevirt.io/kubevirt/pkg/monitoring/profiler"
-
 	snapshotv1 "kubevirt.io/client-go/apis/snapshot/v1alpha1"
 	"kubevirt.io/client-go/kubecli"
 	"kubevirt.io/client-go/log"
@@ -57,6 +56,7 @@ import (
 	"kubevirt.io/kubevirt/pkg/certificates/bootstrap"
 	containerdisk "kubevirt.io/kubevirt/pkg/container-disk"
 	"kubevirt.io/kubevirt/pkg/controller"
+	"kubevirt.io/kubevirt/pkg/healthz"
 
 	"kubevirt.io/kubevirt/pkg/monitoring/perfscale"
 	vmiprom "kubevirt.io/kubevirt/pkg/monitoring/vmistats" // import for prometheus metrics
@@ -287,18 +287,6 @@ func Execute() {
 	app.clusterConfig.SetConfigModifiedCallback(app.shouldChangeLogVerbosity)
 	app.clusterConfig.SetConfigModifiedCallback(app.shouldChangeRateLimiter)
 
-	webService := new(restful.WebService)
-	webService.Path("/").Consumes(restful.MIME_JSON).Produces(restful.MIME_JSON)
-	webService.Route(webService.GET("/healthz").To(healthz.KubeConnectionHealthzFuncFactory(app.clusterConfig, apiHealthVersion)).Doc("Health endpoint"))
-	webService.Route(webService.GET("/leader").To(app.leaderProbe).Doc("Leader endpoint"))
-
-	componentProfiler := profiler.NewProfileManager(app.clusterConfig)
-	webService.Route(webService.GET("/start-profiler").To(componentProfiler.HandleStartProfiler).Doc("start profiler endpoint"))
-	webService.Route(webService.GET("/stop-profiler").To(componentProfiler.HandleStopProfiler).Doc("stop profiler endpoint"))
-	webService.Route(webService.GET("/dump-profiler").To(componentProfiler.HandleDumpProfiler).Doc("dump profiler results endpoint"))
-
-	restful.Add(webService)
-
 	app.vmiInformer = app.informerFactory.VMI()
 	app.kvPodInformer = app.informerFactory.KubeVirtPod()
 	app.nodeInformer = app.informerFactory.KubeVirtNode()
@@ -337,6 +325,7 @@ func Execute() {
 	}
 
 	app.initCommon()
+	app.initEndpoints()
 	app.initReplicaSet()
 	app.initVirtualMachines()
 	app.initDisruptionBudgetController()
@@ -475,6 +464,31 @@ func (vca *VirtControllerApp) getNewRecorder(namespace string, componentName str
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartRecordingToSink(&k8coresv1.EventSinkImpl{Interface: vca.clientSet.CoreV1().Events(namespace)})
 	return eventBroadcaster.NewRecorder(scheme.Scheme, k8sv1.EventSource{Component: componentName})
+}
+
+func (vca *VirtControllerApp) initEndpoints() {
+	webService := new(restful.WebService)
+
+	webService.
+		Path("/").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	healthzHandler :=
+		healthz.KubeConnectionHealthzFuncFactory(&healthz.KubeConnectionHealthzParams{
+			ClusterConfig: vca.clusterConfig,
+			HVersion:      apiHealthVersion,
+		})
+
+	webService.Route(webService.GET("/healthz").To(healthzHandler).Doc("Health endpoint"))
+	webService.Route(webService.GET("/leader").To(vca.leaderProbe).Doc("Leader endpoint"))
+
+	componentProfiler := profiler.NewProfileManager(vca.clusterConfig)
+	webService.Route(webService.GET("/start-profiler").To(componentProfiler.HandleStartProfiler).Doc("start profiler endpoint"))
+	webService.Route(webService.GET("/stop-profiler").To(componentProfiler.HandleStopProfiler).Doc("stop profiler endpoint"))
+	webService.Route(webService.GET("/dump-profiler").To(componentProfiler.HandleDumpProfiler).Doc("dump profiler results endpoint"))
+
+	restful.Add(webService)
 }
 
 func (vca *VirtControllerApp) initCommon() {

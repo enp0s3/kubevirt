@@ -459,11 +459,22 @@ func (app *virtHandlerApp) shouldChangeRateLimiter() {
 	log.Log.V(2).Infof("setting rate limiter to %v QPS and %v Burst", qps, burst)
 }
 
-func (app *virtHandlerApp) runPrometheusServer(errCh chan error) {
+func (app *virtHandlerApp) initEndpoints() *restful.Container {
 	mux := restful.NewContainer()
 	webService := new(restful.WebService)
-	webService.Path("/").Consumes(restful.MIME_JSON).Produces(restful.MIME_JSON)
-	webService.Route(webService.GET("/healthz").To(healthz.KubeConnectionHealthzFuncFactory(app.clusterConfig, apiHealthVersion)).Doc("Health endpoint"))
+
+	webService.
+		Path("/").
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+
+	healthzHandler :=
+		healthz.KubeConnectionHealthzFuncFactory(&healthz.KubeConnectionHealthzParams{
+			ClusterConfig: app.clusterConfig,
+			HVersion:      apiHealthVersion,
+		})
+
+	webService.Route(webService.GET("/healthz").To(healthzHandler).Doc("Health endpoint"))
 
 	componentProfiler := profiler.NewProfileManager(app.clusterConfig)
 	webService.Route(webService.GET("/start-profiler").To(componentProfiler.HandleStartProfiler).Doc("start profiler endpoint"))
@@ -473,6 +484,12 @@ func (app *virtHandlerApp) runPrometheusServer(errCh chan error) {
 	mux.Add(webService)
 	log.Log.V(1).Infof("metrics: max concurrent requests=%d", app.MaxRequestsInFlight)
 	mux.Handle("/metrics", promdomain.Handler(app.MaxRequestsInFlight))
+
+	return mux
+}
+
+func (app *virtHandlerApp) runPrometheusServer(errCh chan error) {
+	mux := app.initEndpoints()
 	server := http.Server{
 		Addr:      app.ServiceListen.Address(),
 		Handler:   mux,

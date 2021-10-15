@@ -209,6 +209,12 @@ func (app *virtAPIApp) composeSubresources() {
 
 	var subwss []*restful.WebService
 
+	healthzHandler :=
+		healthz.KubeConnectionHealthzFuncFactory(&healthz.KubeConnectionHealthzParams{
+			ClusterConfig: app.clusterConfig,
+			HVersion:      apiHealthVersion,
+		})
+
 	for _, version := range v1.SubresourceGroupVersions {
 		subresourcesvmGVR := schema.GroupVersionResource{Group: version.Group, Version: version.Version, Resource: "virtualmachines"}
 		subresourcesvmiGVR := schema.GroupVersionResource{Group: version.Group, Version: version.Version, Resource: "virtualmachineinstances"}
@@ -374,7 +380,7 @@ func (app *virtAPIApp) composeSubresources() {
 			Returns(http.StatusOK, "OK", "").
 			Returns(http.StatusBadRequest, httpStatusBadRequestMessage, ""))
 		subws.Route(subws.GET(rest.SubResourcePath("healthz")).
-			To(healthz.KubeConnectionHealthzFuncFactory(app.clusterConfig, apiHealthVersion)).
+			To(healthzHandler).
 			Consumes(restful.MIME_JSON).
 			Produces(restful.MIME_JSON).
 			Operation(version.Version+"CheckHealth").
@@ -558,7 +564,8 @@ func (app *virtAPIApp) composeSubresources() {
 		Doc("Get KubeVirt API root paths").
 		Returns(http.StatusOK, "OK", metav1.RootPaths{}).
 		Returns(http.StatusNotFound, httpStatusNotFoundMessage, ""))
-	ws.Route(ws.GET("/healthz").To(healthz.KubeConnectionHealthzFuncFactory(app.clusterConfig, apiHealthVersion)).Doc("Health endpoint"))
+
+	ws.Route(ws.GET("/healthz").To(healthzHandler).Doc("Health endpoint"))
 
 	componentProfiler := profiler.NewProfileManager(app.clusterConfig)
 
