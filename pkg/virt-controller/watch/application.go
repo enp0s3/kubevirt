@@ -478,6 +478,16 @@ func (vca *VirtControllerApp) initEndpoints() {
 		healthz.KubeConnectionHealthzFuncFactory(&healthz.KubeConnectionHealthzParams{
 			ClusterConfig: vca.clusterConfig,
 			HVersion:      apiHealthVersion,
+			AdditionalHandler: func(_ *restful.Request, response *restful.Response) {
+				status := response.StatusCode()
+				if status == http.StatusOK {
+					readyGauge.Set(1)
+				} else {
+					readyGauge.Set(0)
+				}
+
+				return
+			},
 		})
 
 	webService.Route(webService.GET("/healthz").To(healthzHandler).Doc("Health endpoint"))

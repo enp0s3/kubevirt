@@ -470,8 +470,9 @@ func (app *virtHandlerApp) initEndpoints() *restful.Container {
 
 	healthzHandler :=
 		healthz.KubeConnectionHealthzFuncFactory(&healthz.KubeConnectionHealthzParams{
-			ClusterConfig: app.clusterConfig,
-			HVersion:      apiHealthVersion,
+			ClusterConfig:     app.clusterConfig,
+			HVersion:          apiHealthVersion,
+			AdditionalHandler: nil,
 		})
 
 	webService.Route(webService.GET("/healthz").To(healthzHandler).Doc("Health endpoint"))

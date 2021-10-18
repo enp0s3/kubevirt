@@ -71,10 +71,13 @@ func (h *KubeApiHealthzVersion) GetVersion() (v interface{}) {
 type KubeConnectionHealthzParams struct {
 	ClusterConfig *virtconfig.ClusterConfig
 	HVersion      *KubeApiHealthzVersion
+	//TODO: implement a more generic approach to register common
+	// and custom health checks.
+	AdditionalHandler restful.RouteFunction
 }
 
 func KubeConnectionHealthzFuncFactory(params *KubeConnectionHealthzParams) restful.RouteFunction {
-	return func(_ *restful.Request, response *restful.Response) {
+	return func(req *restful.Request, response *restful.Response) {
 		res := map[string]interface{}{}
 		var version = params.HVersion.GetVersion()
 
@@ -103,6 +106,11 @@ func KubeConnectionHealthzFuncFactory(params *KubeConnectionHealthzParams) restf
 		res["apiserver"] = map[string]interface{}{"connectivity": "ok", "version": version}
 		res["config-resource-version"] = params.ClusterConfig.GetResourceVersion()
 		response.WriteHeaderAndJson(http.StatusOK, res, restful.MIME_JSON)
+
+		if params.AdditionalHandler != nil {
+			params.AdditionalHandler(req, response)
+		}
+
 		return
 	}
 }

@@ -211,8 +211,9 @@ func (app *virtAPIApp) composeSubresources() {
 
 	healthzHandler :=
 		healthz.KubeConnectionHealthzFuncFactory(&healthz.KubeConnectionHealthzParams{
-			ClusterConfig: app.clusterConfig,
-			HVersion:      apiHealthVersion,
+			ClusterConfig:     app.clusterConfig,
+			HVersion:          apiHealthVersion,
+			AdditionalHandler: nil,
 		})
 
 	for _, version := range v1.SubresourceGroupVersions {
