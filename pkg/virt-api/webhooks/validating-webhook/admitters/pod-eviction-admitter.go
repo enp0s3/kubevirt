@@ -7,6 +7,7 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	virtv1 "kubevirt.io/api/core/v1"
 	"kubevirt.io/client-go/kubecli"
@@ -66,10 +67,34 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 }
 
 func (admitter *PodEvictionAdmitter) markVMI(ar *admissionv1.AdmissionReview, vmi *virtv1.VirtualMachineInstance, dryRun bool) (err error) {
-	vmiCopy := vmi.DeepCopy()
-	vmiCopy.Status.EvacuationNodeName = vmi.Status.NodeName
+	//vmiCopy := vmi.DeepCopy()
+	//vmiCopy.Status.EvacuationNodeName = vmi.Status.NodeName
+	//
+	//oldVmi, err := json.Marshal(vmi)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//newVmi, err := json.Marshal(vmiCopy)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//patch, err := strategicpatch.CreateTwoWayMergePatch(oldVmi, newVmi, vmi)
+	//if err != nil {
+	//	return
+	//}
+
+	data := fmt.Sprintf(`{"status":{"evacuationNodeName": "%s"}}`, vmi.Status.NodeName)
+
 	if !dryRun {
-		_, err = admitter.VirtClient.VirtualMachineInstance(ar.Request.Namespace).Update(vmiCopy)
+		_, err = admitter.
+			VirtClient.
+			VirtualMachineInstance(ar.Request.Namespace).
+			Patch(vmi.Name,
+				types.StrategicMergePatchType,
+				[]byte(data),
+				&metav1.PatchOptions{})
 	}
 	return err
 }
