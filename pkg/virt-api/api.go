@@ -766,7 +766,7 @@ func (app *virtAPIApp) registerValidatingWebhooks(informers *webhooks.Informers)
 		validating_webhook.ServeStatusValidation(w, r, app.clusterConfig, app.virtCli, informers)
 	})
 	http.HandleFunc(components.LauncherEvictionValidatePath, func(w http.ResponseWriter, r *http.Request) {
-		validating_webhook.ServePodEvictionInterceptor(w, r, app.clusterConfig, app.virtCli)
+		validating_webhook.ServePodEvictionInterceptor(w, r, app.clusterConfig, app.virtCli, informers)
 	})
 	http.HandleFunc(components.MigrationPolicyCreateValidatePath, func(w http.ResponseWriter, r *http.Request) {
 		validating_webhook.ServeMigrationPolicies(w, r, app.virtCli)
@@ -941,6 +941,7 @@ func (app *virtAPIApp) Run() {
 
 	flavorInformer := kubeInformerFactory.VirtualMachineFlavor()
 	clusterFlavorInformer := kubeInformerFactory.VirtualMachineClusterFlavor()
+	KvPodsInformer := kubeInformerFactory.KubeVirtPod()
 
 	// It is safe to call kubeInformerFactory.Start multiple times.
 	// The function is idempotent and will only start the informers that
@@ -956,6 +957,7 @@ func (app *virtAPIApp) Run() {
 		DataSourceInformer:      dataSourceInformer,
 		FlavorInformer:          flavorInformer,
 		ClusterFlavorInformer:   clusterFlavorInformer,
+		KvPodsInformer:          KvPodsInformer,
 	}
 
 	// Build webhook subresources

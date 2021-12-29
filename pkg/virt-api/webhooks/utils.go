@@ -90,6 +90,7 @@ type Informers struct {
 	DataSourceInformer      cache.SharedIndexInformer
 	FlavorInformer          cache.SharedIndexInformer
 	ClusterFlavorInformer   cache.SharedIndexInformer
+	KvPodsInformer          cache.SharedIndexInformer
 }
 
 func IsKubeVirtServiceAccount(serviceAccount string) bool {

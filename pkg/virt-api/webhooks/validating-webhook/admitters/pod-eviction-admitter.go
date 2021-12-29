@@ -1,11 +1,14 @@
 package admitters
 
 import (
-	"context"
 	"fmt"
 	"net/http"
+	"strings"
+
+	"k8s.io/client-go/tools/cache"
 
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -17,6 +20,8 @@ import (
 )
 
 type PodEvictionAdmitter struct {
+	VMIInformer   cache.SharedIndexInformer
+	PodInformer   cache.SharedIndexInformer
 	ClusterConfig *virtconfig.ClusterConfig
 	VirtClient    kubecli.KubevirtClient
 }
@@ -26,11 +31,18 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 		return validating_webhooks.NewPassingAdmissionResponse()
 	}
 
-	launcher, err := admitter.VirtClient.CoreV1().Pods(ar.Request.Namespace).Get(context.Background(), ar.Request.Name, metav1.GetOptions{})
-	if err != nil {
+	key := fmt.Sprintf("%v/%v", ar.Request.Namespace, ar.Request.Name)
+	obj, exists, err := admitter.PodInformer.GetStore().GetByKey(key)
+	if !exists || err != nil {
 		return validating_webhooks.NewPassingAdmissionResponse()
 	}
 
+	//launcher, err := admitter.VirtClient.CoreV1().Pods(ar.Request.Namespace).Get(context.Background(), ar.Request.Name, metav1.GetOptions{})
+	//if err != nil {
+	//	return validating_webhooks.NewPassingAdmissionResponse()
+	//}
+
+	launcher := obj.(*corev1.Pod)
 	if value, exists := launcher.GetLabels()[virtv1.AppLabel]; !exists || value != "virt-launcher" {
 		return validating_webhooks.NewPassingAdmissionResponse()
 	}
@@ -40,10 +52,21 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 		return validating_webhooks.NewPassingAdmissionResponse()
 	}
 
-	vmi, err := admitter.VirtClient.VirtualMachineInstance(ar.Request.Namespace).Get(domainName, &metav1.GetOptions{})
+	key = fmt.Sprintf("%v/%v", ar.Request.Namespace, domainName)
+	obj, exists, err = admitter.VMIInformer.GetStore().GetByKey(key)
+
 	if err != nil {
 		return denied(fmt.Sprintf("kubevirt failed getting the vmi: %s", err.Error()))
+	} else if !exists {
+		return denied(fmt.Sprintf("VMI %s corresponding to the virt-launcher pod %s not found", key, launcher.Name))
 	}
+
+	vmi := obj.(*virtv1.VirtualMachineInstance)
+	//vmi, err = admitter.VirtClient.VirtualMachineInstance(ar.Request.Namespace).Get(domainName, &metav1.GetOptions{})
+	//if err != nil {
+	//	return denied(fmt.Sprintf("kubevirt failed getting the vmi: %s", err.Error()))
+	//}
+
 	if !vmi.IsEvictable() {
 		// we don't act on VMIs without an eviction strategy
 		return validating_webhooks.NewPassingAdmissionResponse()
@@ -67,8 +90,8 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 }
 
 func (admitter *PodEvictionAdmitter) markVMI(ar *admissionv1.AdmissionReview, vmi *virtv1.VirtualMachineInstance, dryRun bool) (err error) {
-	//vmiCopy := vmi.DeepCopy()
-	//vmiCopy.Status.EvacuationNodeName = vmi.Status.NodeName
+	vmiCopy := vmi.DeepCopy()
+	vmiCopy.Status.EvacuationNodeName = vmi.Status.NodeName
 	//
 	//oldVmi, err := json.Marshal(vmi)
 	//if err != nil {
@@ -84,16 +107,17 @@ func (admitter *PodEvictionAdmitter) markVMI(ar *admissionv1.AdmissionReview, vm
 	//if err != nil {
 	//	return
 	//}
+	// fmt.Sprintf("{\"spec\":{\"runStrategy\": \"%s\"}}", runStrategy)
+	//data := fmt.Sprintf("{\"status\":{\"evacuationNodeName\": \"%s\"}}", vmi.Status.NodeName)
+	data := generateUpdateStatusPatch(vmi, vmiCopy)
 
-	data := fmt.Sprintf(`{"status":{"evacuationNodeName": "%s"}}`, vmi.Status.NodeName)
-
-	if !dryRun {
+	if len(data) > 0 && !dryRun {
 		_, err = admitter.
 			VirtClient.
 			VirtualMachineInstance(ar.Request.Namespace).
 			Patch(vmi.Name,
-				types.StrategicMergePatchType,
-				[]byte(data),
+				types.JSONPatchType,
+				data,
 				&metav1.PatchOptions{})
 	}
 	return err
@@ -107,4 +131,23 @@ func denied(message string) *admissionv1.AdmissionResponse {
 			Code:    http.StatusTooManyRequests,
 		},
 	}
+}
+
+func generateUpdateStatusPatch(oldVMI, newVMI *virtv1.VirtualMachineInstance) []byte {
+	var patchOps []string
+
+	if oldVMI.Status.EvacuationNodeName != newVMI.Status.EvacuationNodeName {
+		if oldVMI.Status.EvacuationNodeName == "" {
+			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "add", "path": "/status/evacuationNodeName", "value": %s }`, newVMI.Status.EvacuationNodeName))
+		} else {
+			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "test", "path": "/status/evacuationNodeName", "value": %s }`, oldVMI.Status.EvacuationNodeName))
+			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "replace", "path": "/status/evacuationNodeName", "value": %s }`, newVMI.Status.EvacuationNodeName))
+		}
+	}
+
+	if len(patchOps) == 0 {
+		return nil
+	}
+
+	return []byte(fmt.Sprintf("[%s]", strings.Join(patchOps, ", ")))
 }
