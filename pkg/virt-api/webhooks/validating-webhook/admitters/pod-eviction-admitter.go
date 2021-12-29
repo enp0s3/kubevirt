@@ -33,6 +33,7 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 	}
 
 	key := fmt.Sprintf("%v/%v", ar.Request.Namespace, ar.Request.Name)
+	log.Log.V(2).Infof("Entering Admit with key %s", key)
 	obj, exists, err := admitter.PodInformer.GetStore().GetByKey(key)
 	if !exists || err != nil {
 		log.Log.V(2).Infof("could not find pod %s", key)
@@ -60,6 +61,7 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 	}
 
 	key = fmt.Sprintf("%v/%v", ar.Request.Namespace, domainName)
+	log.Log.V(2).Infof("looking for VMI with key %s", key)
 	obj, exists, err = admitter.VMIInformer.GetStore().GetByKey(key)
 
 	if err != nil {
@@ -76,6 +78,7 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 	//	return denied(fmt.Sprintf("kubevirt failed getting the vmi: %s", err.Error()))
 	//}
 
+	log.Log.V(2).Infof("VMI %s found, is it evictable", key)
 	if !vmi.IsEvictable() {
 		// we don't act on VMIs without an eviction strategy
 		return validating_webhooks.NewPassingAdmissionResponse()
@@ -85,6 +88,7 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 			"VMI %s is configured with an eviction strategy but is not live-migratable", vmi.Name))
 	}
 
+	log.Log.V(2).Infof("VMI %s found launcher name is %s ", key, launcher.Name)
 	if !vmi.IsMarkedForEviction() && vmi.Status.NodeName == launcher.Spec.NodeName {
 		dryRun := ar.Request.DryRun != nil && *ar.Request.DryRun == true
 		err := admitter.markVMI(ar, vmi, dryRun)
@@ -130,6 +134,8 @@ func (admitter *PodEvictionAdmitter) markVMI(ar *admissionv1.AdmissionReview, vm
 				types.JSONPatchType,
 				data,
 				&metav1.PatchOptions{})
+	} else {
+		log.Log.V(2).Info("Entering markVMI, nothing to patch")
 	}
 	return err
 }
@@ -160,5 +166,6 @@ func generateUpdateStatusPatch(oldVMI, newVMI *virtv1.VirtualMachineInstance) []
 		return nil
 	}
 
+	log.Log.V(2).Infof("Entering generateUpdateStatusPatch, patch data is  %s", patchOps)
 	return []byte(fmt.Sprintf("[%s]", strings.Join(patchOps, ", ")))
 }
