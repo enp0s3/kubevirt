@@ -155,10 +155,10 @@ func generateUpdateStatusPatch(oldVMI, newVMI *virtv1.VirtualMachineInstance) []
 
 	if oldVMI.Status.EvacuationNodeName != newVMI.Status.EvacuationNodeName {
 		if oldVMI.Status.EvacuationNodeName == "" {
-			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "add", "path": "/status/evacuationNodeName", "value": %s }`, newVMI.Status.EvacuationNodeName))
+			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "add", "path": "/status/evacuationNodeName", "value": "%s" }`, newVMI.Status.EvacuationNodeName))
 		} else {
-			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "test", "path": "/status/evacuationNodeName", "value": %s }`, oldVMI.Status.EvacuationNodeName))
-			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "replace", "path": "/status/evacuationNodeName", "value": %s }`, newVMI.Status.EvacuationNodeName))
+			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "test", "path": "/status/evacuationNodeName", "value": "%s" }`, oldVMI.Status.EvacuationNodeName))
+			patchOps = append(patchOps, fmt.Sprintf(`{ "op": "replace", "path": "/status/evacuationNodeName", "value": "%s" }`, newVMI.Status.EvacuationNodeName))
 		}
 	}
 
