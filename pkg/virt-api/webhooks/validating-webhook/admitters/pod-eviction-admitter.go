@@ -14,6 +14,7 @@ import (
 
 	virtv1 "kubevirt.io/api/core/v1"
 	"kubevirt.io/client-go/kubecli"
+	"kubevirt.io/client-go/log"
 
 	validating_webhooks "kubevirt.io/kubevirt/pkg/util/webhooks/validating-webhooks"
 	virtconfig "kubevirt.io/kubevirt/pkg/virt-config"
@@ -34,6 +35,10 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 	key := fmt.Sprintf("%v/%v", ar.Request.Namespace, ar.Request.Name)
 	obj, exists, err := admitter.PodInformer.GetStore().GetByKey(key)
 	if !exists || err != nil {
+		log.Log.V(2).Infof("could not find pod %s", key)
+		if err != nil {
+			log.Log.V(2).Infof("could not find pod %s with error: %s", key, err.Error())
+		}
 		return validating_webhooks.NewPassingAdmissionResponse()
 	}
 
@@ -44,11 +49,13 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 
 	launcher := obj.(*corev1.Pod)
 	if value, exists := launcher.GetLabels()[virtv1.AppLabel]; !exists || value != "virt-launcher" {
+		log.Log.V(2).Infof("Pod with name %s doesn't have the kubevirt value ", launcher.Name)
 		return validating_webhooks.NewPassingAdmissionResponse()
 	}
 
 	domainName, exists := launcher.GetAnnotations()[virtv1.DomainAnnotation]
 	if !exists {
+		log.Log.V(2).Infof("Pod with name %s doesn't have the annotation to the VMI ", launcher.Name)
 		return validating_webhooks.NewPassingAdmissionResponse()
 	}
 
@@ -56,8 +63,10 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 	obj, exists, err = admitter.VMIInformer.GetStore().GetByKey(key)
 
 	if err != nil {
+		log.Log.V(2).Infof("kubevirt failed getting the vmi: %s", err.Error())
 		return denied(fmt.Sprintf("kubevirt failed getting the vmi: %s", err.Error()))
 	} else if !exists {
+		log.Log.V(2).Infof("VMI %s corresponding to the virt-launcher pod %s not found", key, launcher.Name)
 		return denied(fmt.Sprintf("VMI %s corresponding to the virt-launcher pod %s not found", key, launcher.Name))
 	}
 
@@ -71,6 +80,7 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 		// we don't act on VMIs without an eviction strategy
 		return validating_webhooks.NewPassingAdmissionResponse()
 	} else if !vmi.IsMigratable() {
+		log.Log.V(2).Infof("VMI %s is configured with an eviction strategy but is not live-migratable", vmi.Name)
 		return denied(fmt.Sprintf(
 			"VMI %s is configured with an eviction strategy but is not live-migratable", vmi.Name))
 	}
@@ -80,6 +90,7 @@ func (admitter *PodEvictionAdmitter) Admit(ar *admissionv1.AdmissionReview) *adm
 		err := admitter.markVMI(ar, vmi, dryRun)
 		if err != nil {
 			// As with the previous case, it is up to the user to issue a retry.
+			log.Log.V(2).Infof("kubevirt failed marking the vmi for eviction: %s", err.Error())
 			return denied(fmt.Sprintf("kubevirt failed marking the vmi for eviction: %s", err.Error()))
 		}
 	}
