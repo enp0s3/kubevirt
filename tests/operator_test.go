@@ -1386,7 +1386,7 @@ spec:
 			cm, err := virtClient.CoreV1().ConfigMaps(originalKv.Namespace).Get(context.Background(), "kubevirt-ca", metav1.GetOptions{})
 			//vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
 			Expect(err).ToNot(HaveOccurred())
-			currentDeploymentGeneration := cm.Generation
+			currentDeploymentGeneration := cm.GetGeneration()
 
 			kv, err = virtClient.KubeVirt(originalKv.Namespace).Update(kv)
 			Expect(err).ToNot(HaveOccurred())
@@ -1397,7 +1397,7 @@ spec:
 				cm, err := virtClient.CoreV1().ConfigMaps(originalKv.Namespace).Get(context.Background(), "kubevirt-ca", metav1.GetOptions{})
 				// vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				return cm.Generation
+				return cm.GetGeneration()
 			}, 60*time.Second, 5*time.Second).Should(BeNumerically(">", currentDeploymentGeneration))
 
 			By("Test that patch was applied to deployment")
