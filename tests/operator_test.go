@@ -1375,17 +1375,18 @@ spec:
 			kv.Spec.CustomizeComponents = v1.CustomizeComponents{
 				Patches: []v1.CustomizeComponentsPatch{
 					{
-						ResourceName: "virt-controller",
-						ResourceType: "Deployment",
-						Patch:        fmt.Sprintf(`{"spec":{"template": {"metadata": { "annotations": {"%s":"%s"}}}}}`, annotationPatchKey, annotationPatchValue),
+						ResourceName: "kubevirt-ca",
+						ResourceType: "ConfigMap",
+						Patch:        fmt.Sprintf(`{"metadata": { "annotations": {"%s":"%s"}}}`, annotationPatchKey, annotationPatchValue),
 						Type:         v1.StrategicMergePatchType,
 					},
 				},
 			}
 
-			vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
+			cm, err := virtClient.CoreV1().ConfigMaps(originalKv.Namespace).Get(context.Background(), "kubevirt-ca", metav1.GetOptions{})
+			//vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
 			Expect(err).ToNot(HaveOccurred())
-			currentDeploymentGeneration := vc.Generation
+			currentDeploymentGeneration := cm.Generation
 
 			kv, err = virtClient.KubeVirt(originalKv.Namespace).Update(kv)
 			Expect(err).ToNot(HaveOccurred())
@@ -1393,30 +1394,27 @@ spec:
 
 			By("Check that deployment generation number increased")
 			Eventually(func() int64 {
-				vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
+				cm, err := virtClient.CoreV1().ConfigMaps(originalKv.Namespace).Get(context.Background(), "kubevirt-ca", metav1.GetOptions{})
+				// vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				return vc.Generation
+				return cm.Generation
 			}, 60*time.Second, 5*time.Second).Should(BeNumerically(">", currentDeploymentGeneration))
-
-			Consistently(func() int64 {
-				vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
-				Expect(err).ToNot(HaveOccurred())
-
-				return vc.Generation
-			}, 30*time.Second, 5*time.Second).Should(BeNumerically(">", currentDeploymentGeneration))
 
 			By("Test that patch was applied to deployment")
 			Eventually(func() string {
-				vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
+				cm, err := virtClient.CoreV1().ConfigMaps(originalKv.Namespace).Get(context.Background(), "kubevirt-ca", metav1.GetOptions{})
+				// vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
-				return vc.Spec.Template.ObjectMeta.Annotations[annotationPatchKey]
+				// return vc.Spec.Template.ObjectMeta.Annotations[annotationPatchKey]
+				return cm.ObjectMeta.Annotations[annotationPatchKey]
 			}, 60*time.Second, 5*time.Second).Should(Equal(annotationPatchValue))
 
 			Consistently(func() string {
-				vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
+				cm, err := virtClient.CoreV1().ConfigMaps(originalKv.Namespace).Get(context.Background(), "kubevirt-ca", metav1.GetOptions{})
+				// vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
-
-				return vc.Spec.Template.ObjectMeta.Annotations[annotationPatchKey]
+				// return vc.Spec.Template.ObjectMeta.Annotations[annotationPatchKey]
+				return cm.ObjectMeta.Annotations[annotationPatchKey]
 			}, 30*time.Second, 5*time.Second).Should(Equal(annotationPatchValue))
 
 			By("Deleting patch from KubeVirt object")
@@ -1432,10 +1430,11 @@ spec:
 
 			By("Test that patch was removed from deployment")
 			Eventually(func() string {
-				vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
+				cm, err := virtClient.CoreV1().ConfigMaps(originalKv.Namespace).Get(context.Background(), "kubevirt-ca", metav1.GetOptions{})
+				// vc, err := virtClient.AppsV1().Deployments(originalKv.Namespace).Get(context.Background(), "virt-controller", metav1.GetOptions{})
 				Expect(err).ToNot(HaveOccurred())
-
-				return vc.Spec.Template.ObjectMeta.Annotations[annotationPatchKey]
+				// return vc.Spec.Template.ObjectMeta.Annotations[annotationPatchKey]
+				return cm.ObjectMeta.Annotations[annotationPatchKey]
 			}, 60*time.Second, 5*time.Second).Should(Equal(""))
 		})
 	})
