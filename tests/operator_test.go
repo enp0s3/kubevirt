@@ -1338,25 +1338,20 @@ spec:
 			newVirtualMachineInstancesPerNode := 10
 			maxDevicesCommandArgument := fmt.Sprintf("--maxDevices %d", newVirtualMachineInstancesPerNode)
 
-			By("Updating KubeVirt Object")
-			kv, err := virtClient.KubeVirt(flags.KubeVirtInstallNamespace).Get(originalKv.Name, &metav1.GetOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(kv.Spec.Configuration.VirtualMachineInstancesPerNode).ToNot(Equal(&newVirtualMachineInstancesPerNode))
-			kv.Spec.Configuration.VirtualMachineInstancesPerNode = &newVirtualMachineInstancesPerNode
+			By("Retrieving current Kubevirt configuration")
+			origKv := util2.GetCurrentKv(virtClient)
+			Expect(origKv.Spec.Configuration.VirtualMachineInstancesPerNode).ToNot(Equal(&newVirtualMachineInstancesPerNode))
 
-			kv, err = virtClient.KubeVirt(flags.KubeVirtInstallNamespace).Update(kv)
-			Expect(err).ToNot(HaveOccurred())
+			By("Updating KubeVirt configuration")
+			updatedKv := origKv
+			updatedKv.Spec.Configuration.VirtualMachineInstancesPerNode = &newVirtualMachineInstancesPerNode
+			tests.UpdateKubeVirtConfigValueAndWait(updatedKv.Spec.Configuration)
 
 			By("Test that patch was applied to DaemonSet")
 			Eventually(fetchVirtHandlerCommand, 60*time.Second, 5*time.Second).Should(ContainSubstring(maxDevicesCommandArgument))
 
-			By("Deleting patch from KubeVirt object")
-			kv, err = virtClient.KubeVirt(flags.KubeVirtInstallNamespace).Get(originalKv.Name, &metav1.GetOptions{})
-			Expect(err).ToNot(HaveOccurred())
-
-			kv.Spec.Configuration.VirtualMachineInstancesPerNode = nil
-			kv, err = virtClient.KubeVirt(flags.KubeVirtInstallNamespace).Update(kv)
-			Expect(err).ToNot(HaveOccurred())
+			By("Restoring Kubevirt configuration")
+			tests.UpdateKubeVirtConfigValueAndWait(origKv.Spec.Configuration)
 
 			By("Test that patch was removed from DaemonSet")
 			Eventually(fetchVirtHandlerCommand, 60*time.Second, 5*time.Second).ShouldNot(ContainSubstring(maxDevicesCommandArgument))

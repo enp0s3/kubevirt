@@ -4497,6 +4497,11 @@ func WaitForConfigToBePropagatedToComponent(podLabel string, resourceVersion str
 			if pod.DeletionTimestamp != nil {
 				continue
 			}
+
+			if pod.Status.Phase != k8sv1.PodRunning {
+				return fmt.Errorf("control-plane pod is not in running phase %s", errAdditionalInfo)
+			}
+
 			body, err := CallUrlOnPod(&pod, "8443", "/healthz")
 			if err != nil {
 				return fmt.Errorf("failed to call healthz endpoint. %s", errAdditionalInfo)
