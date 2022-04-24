@@ -265,6 +265,8 @@ var _ = Describe("[Serial][sig-compute]Infrastructure", func() {
 				doScale(vmpool.Name, int32(vmsToScale))
 				slowDuration := measureDuration()
 				Expect(slowDuration.Seconds()).To(BeNumerically(">", 1.5*fastDuration.Seconds()))
+				doScale(vmpool.Name, 0)
+				_ = virtClient.VirtualMachinePool(util.NamespaceTestDefault).Delete(context.Background(), vmpool.Name, metav1.DeleteOptions{})
 			}, gmeasure.SamplingConfig{N:2000, Duration: 1*time.Hour})
 		})
 	})
