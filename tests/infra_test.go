@@ -26,6 +26,8 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"github.com/onsi/gomega/gmeasure"
+	poolv1 "kubevirt.io/api/pool/v1alpha1"
 	"net"
 	"net/http"
 	neturl "net/url"
@@ -34,8 +36,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	poolv1 "kubevirt.io/api/pool/v1alpha1"
 
 	expect "github.com/google/goexpect"
 	. "github.com/onsi/ginkgo/v2"
@@ -155,112 +155,117 @@ var _ = Describe("[Serial][sig-compute]Infrastructure", func() {
 
 		It("[QUARANTINE]on the virt handler rate limiter should lead to delayed VMI running states", func() {
 
-			vmsToScale := 500
-			createVirtualMachinePool := func(pool *poolv1.VirtualMachinePool) *poolv1.VirtualMachinePool {
-				pool, err = virtClient.VirtualMachinePool(util.NamespaceTestDefault).Create(context.Background(), pool, metav1.CreateOptions{})
-				Expect(err).ToNot(HaveOccurred())
-				return pool
-			}
+			experiment := gmeasure.NewExperiment("Repaginating Books")
+			AddReportEntry(experiment.Name, experiment)
 
-			newVirtualMachinePool := func(vmi *v1.VirtualMachineInstance) *poolv1.VirtualMachinePool {
-				By("Create a new VirtualMachinePool")
-				pool := newPoolFromVMI(vmi)
-				running := false
-				pool.Spec.VirtualMachineTemplate.Spec.Running = &running
-				return createVirtualMachinePool(pool)
-			}
-
-			doScale := func(name string, scale int32) {
-
-				By(fmt.Sprintf("Scaling to %d", scale))
-				pool, err := virtClient.VirtualMachinePool(util.NamespaceTestDefault).Patch(context.Background(), name, types.JSONPatchType, []byte(fmt.Sprintf("[{ \"op\": \"replace\", \"path\": \"/spec/replicas\", \"value\": %v }]", scale)), metav1.PatchOptions{})
-				Expect(err).ToNot(HaveOccurred())
-
-				By("Checking the number of replicas")
-				Eventually(func() int32 {
-					pool, err = virtClient.VirtualMachinePool(util.NamespaceTestDefault).Get(context.Background(), name, metav1.GetOptions{})
+			experiment.Sample(func(idx int) {
+				vmsToScale := 500
+				createVirtualMachinePool := func(pool *poolv1.VirtualMachinePool) *poolv1.VirtualMachinePool {
+					pool, err = virtClient.VirtualMachinePool(util.NamespaceTestDefault).Create(context.Background(), pool, metav1.CreateOptions{})
 					Expect(err).ToNot(HaveOccurred())
-					return pool.Status.Replicas
-				}, 90*time.Second, time.Second).Should(Equal(int32(scale)))
-
-				vms, err := virtClient.VirtualMachine(util.NamespaceTestDefault).List(&metav1.ListOptions{})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(tests.NotDeletedVMs(vms)).To(HaveLen(int(scale)))
-			}
-
-			measureDuration := func() time.Duration {
-				vms, err := virtClient.VirtualMachine(util.NamespaceTestDefault).List(&metav1.ListOptions{})
-				Expect(err).ToNot(HaveOccurred())
-				Expect(len(vms.Items)).To(BeNumerically(">=", 2))
-
-				min := vms.Items[0].ObjectMeta.CreationTimestamp
-				vms.Items = vms.Items[:len(vms.Items)-1]
-				max := vms.Items[0].ObjectMeta.CreationTimestamp
-				vms.Items = vms.Items[:len(vms.Items)-1]
-
-				if max.Before(&min) {
-					max, min = min, max
+					return pool
 				}
 
-				for _, vm := range vms.Items {
-					curr := vm.ObjectMeta.CreationTimestamp
-					if curr.Before(&min) {
-						min = curr
-					} else if !curr.Before(&max) {
-						max = curr
+				newVirtualMachinePool := func(vmi *v1.VirtualMachineInstance) *poolv1.VirtualMachinePool {
+					By("Create a new VirtualMachinePool")
+					pool := newPoolFromVMI(vmi)
+					running := false
+					pool.Spec.VirtualMachineTemplate.Spec.Running = &running
+					return createVirtualMachinePool(pool)
+				}
+
+				doScale := func(name string, scale int32) {
+
+					By(fmt.Sprintf("Scaling to %d", scale))
+					pool, err := virtClient.VirtualMachinePool(util.NamespaceTestDefault).Patch(context.Background(), name, types.JSONPatchType, []byte(fmt.Sprintf("[{ \"op\": \"replace\", \"path\": \"/spec/replicas\", \"value\": %v }]", scale)), metav1.PatchOptions{})
+					Expect(err).ToNot(HaveOccurred())
+
+					By("Checking the number of replicas")
+					Eventually(func() int32 {
+						pool, err = virtClient.VirtualMachinePool(util.NamespaceTestDefault).Get(context.Background(), name, metav1.GetOptions{})
+						Expect(err).ToNot(HaveOccurred())
+						return pool.Status.Replicas
+					}, 90*time.Second, time.Second).Should(Equal(int32(scale)))
+
+					vms, err := virtClient.VirtualMachine(util.NamespaceTestDefault).List(&metav1.ListOptions{})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(tests.NotDeletedVMs(vms)).To(HaveLen(int(scale)))
+				}
+
+				measureDuration := func() time.Duration {
+					vms, err := virtClient.VirtualMachine(util.NamespaceTestDefault).List(&metav1.ListOptions{})
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(vms.Items)).To(BeNumerically(">=", 2))
+
+					min := vms.Items[0].ObjectMeta.CreationTimestamp
+					vms.Items = vms.Items[:len(vms.Items)-1]
+					max := vms.Items[0].ObjectMeta.CreationTimestamp
+					vms.Items = vms.Items[:len(vms.Items)-1]
+
+					if max.Before(&min) {
+						max, min = min, max
 					}
+
+					for _, vm := range vms.Items {
+						curr := vm.ObjectMeta.CreationTimestamp
+						if curr.Before(&min) {
+							min = curr
+						} else if !curr.Before(&max) {
+							max = curr
+						}
+					}
+
+					return time.Duration(max.Second()) - time.Duration(min.Second())
 				}
 
-				return time.Duration(max.Second()) - time.Duration(min.Second())
-			}
+				By("first getting the basetime for a replicaset")
+				targetNode := util.GetAllSchedulableNodes(virtClient).Items[0]
+				vmi := libvmi.NewCirros(
+					libvmi.WithResourceMemory("1Mi"),
+					libvmi.WithNodeSelectorFor(&targetNode),
+				)
 
-			By("first getting the basetime for a replicaset")
-			targetNode := util.GetAllSchedulableNodes(virtClient).Items[0]
-			vmi := libvmi.NewCirros(
-				libvmi.WithResourceMemory("1Mi"),
-				libvmi.WithNodeSelectorFor(&targetNode),
-			)
+				vmpool := newVirtualMachinePool(vmi)
+				doScale(vmpool.Name, int32(vmsToScale))
+				fastDuration := measureDuration()
+				doScale(vmpool.Name, 0)
 
-			vmpool := newVirtualMachinePool(vmi)
-			doScale(vmpool.Name, int32(vmsToScale))
-			fastDuration := measureDuration()
-			doScale(vmpool.Name, 0)
+				//replicaset := tests.NewRandomReplicaSetFromVMI(vmi, 0)
+				//replicaset, err = virtClient.ReplicaSet(util.NamespaceTestDefault).Create(replicaset)
+				//Expect(err).ToNot(HaveOccurred())
+				//libreplicaset.DoScaleWithScaleSubresource(virtClient, replicaset.Name, 10)
+				//Eventually(matcher.AllVMIs(replicaset.Namespace), 90*time.Second, 1*time.Second).Should(matcher.BeInPhase(v1.Running))
+				//vmis, err := matcher.AllVMIs(replicaset.Namespace)()
+				//Expect(err).ToNot(HaveOccurred())
+				//fastDuration := scheduledToRunning(vmis)
+				//
+				//libreplicaset.DoScaleWithScaleSubresource(virtClient, replicaset.Name, 0)
+				//Eventually(matcher.AllVMIs(replicaset.Namespace), 90*time.Second, 1*time.Second).Should(matcher.BeGone())
 
-			//replicaset := tests.NewRandomReplicaSetFromVMI(vmi, 0)
-			//replicaset, err = virtClient.ReplicaSet(util.NamespaceTestDefault).Create(replicaset)
-			//Expect(err).ToNot(HaveOccurred())
-			//libreplicaset.DoScaleWithScaleSubresource(virtClient, replicaset.Name, 10)
-			//Eventually(matcher.AllVMIs(replicaset.Namespace), 90*time.Second, 1*time.Second).Should(matcher.BeInPhase(v1.Running))
-			//vmis, err := matcher.AllVMIs(replicaset.Namespace)()
-			//Expect(err).ToNot(HaveOccurred())
-			//fastDuration := scheduledToRunning(vmis)
-			//
-			//libreplicaset.DoScaleWithScaleSubresource(virtClient, replicaset.Name, 0)
-			//Eventually(matcher.AllVMIs(replicaset.Namespace), 90*time.Second, 1*time.Second).Should(matcher.BeGone())
-
-			By("reducing the throughput on handler")
-			originalKubeVirt := util.GetCurrentKv(virtClient)
-			originalKubeVirt.Spec.Configuration.HandlerConfiguration = &v1.ReloadableComponentConfiguration{
-				RestClient: &v1.RESTClientConfiguration{
-					RateLimiter: &v1.RateLimiter{
-						TokenBucketRateLimiter: &v1.TokenBucketRateLimiter{
-							Burst: 1,
-							QPS:   1,
+				By("reducing the throughput on handler")
+				originalKubeVirt := util.GetCurrentKv(virtClient)
+				originalKubeVirt.Spec.Configuration.HandlerConfiguration = &v1.ReloadableComponentConfiguration{
+					RestClient: &v1.RESTClientConfiguration{
+						RateLimiter: &v1.RateLimiter{
+							TokenBucketRateLimiter: &v1.TokenBucketRateLimiter{
+								Burst: 1,
+								QPS:   1,
+							},
 						},
 					},
-				},
-			}
-			tests.UpdateKubeVirtConfigValueAndWait(originalKubeVirt.Spec.Configuration)
+				}
+				tests.UpdateKubeVirtConfigValueAndWait(originalKubeVirt.Spec.Configuration)
 
-			By("starting a replicaset with reduced throughput")
-			//libreplicaset.DoScaleWithScaleSubresource(virtClient, replicaset.Name, 10)
-			//Eventually(matcher.AllVMIs(replicaset.Namespace), 180*time.Second, 1*time.Second).Should(matcher.BeInPhase(v1.Running))
-			//vmis, err = matcher.AllVMIs(replicaset.Namespace)()
-			//Expect(err).ToNot(HaveOccurred())
-			//slowDuration := scheduledToRunning(vmis)
-			doScale(vmpool.Name, int32(vmsToScale))
-			slowDuration := measureDuration()
-			Expect(slowDuration.Seconds()).To(BeNumerically(">", 1.5*fastDuration.Seconds()))
+				By("starting a replicaset with reduced throughput")
+				//libreplicaset.DoScaleWithScaleSubresource(virtClient, replicaset.Name, 10)
+				//Eventually(matcher.AllVMIs(replicaset.Namespace), 180*time.Second, 1*time.Second).Should(matcher.BeInPhase(v1.Running))
+				//vmis, err = matcher.AllVMIs(replicaset.Namespace)()
+				//Expect(err).ToNot(HaveOccurred())
+				//slowDuration := scheduledToRunning(vmis)
+				doScale(vmpool.Name, int32(vmsToScale))
+				slowDuration := measureDuration()
+				Expect(slowDuration.Seconds()).To(BeNumerically(">", 1.5*fastDuration.Seconds()))
+			}, gmeasure.SamplingConfig{N:2000})
 		})
 	})
 
