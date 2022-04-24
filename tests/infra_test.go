@@ -265,7 +265,7 @@ var _ = Describe("[Serial][sig-compute]Infrastructure", func() {
 				doScale(vmpool.Name, int32(vmsToScale))
 				slowDuration := measureDuration()
 				Expect(slowDuration.Seconds()).To(BeNumerically(">", 1.5*fastDuration.Seconds()))
-			}, gmeasure.SamplingConfig{N:2000})
+			}, gmeasure.SamplingConfig{N:2000, Duration: 1*time.Hour})
 		})
 	})
 
