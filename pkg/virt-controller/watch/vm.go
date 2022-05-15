@@ -1539,6 +1539,7 @@ func (c *VMController) queueVMsForDataVolume(dataVolume *cdiv1.DataVolume) {
 }
 
 func (c *VMController) addVirtualMachine(obj interface{}) {
+
 	c.enqueueVm(obj)
 }
 
@@ -1696,11 +1697,7 @@ func (c *VMController) isVirtualMachineStatusCrashLoopBackOff(vm *virtv1.Virtual
 
 // isVirtualMachineStatusStopped determines whether the VM status field should be set to "Stopped".
 func (c *VMController) isVirtualMachineStatusStopped(vm *virtv1.VirtualMachine, vmi *virtv1.VirtualMachineInstance) bool {
-	if vmi != nil {
-		return vmi.IsFinal()
-	}
-
-	return !c.isVMIStartExpected(vm)
+	return (vmi == nil) || (vmi != nil && vmi.IsFinal())
 }
 
 // isVirtualMachineStatusStopped determines whether the VM status field should be set to "Provisioning".
