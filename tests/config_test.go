@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"kubevirt.io/kubevirt/tests/libvmi"
+
 	expect "github.com/google/goexpect"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -103,7 +105,9 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				expectedOutput := "value1value2value3"
 
 				By("Running VMI")
-				vmi := tests.NewRandomVMIWithConfigMap(configMapName)
+				//vmi := tests.NewRandomVMIWithConfigMap(configMapName)
+				volumeName := configMapName
+				vmi := libvmi.NewAlpine(libvmi.WithConfigMap(configMapName, volumeName, ""))
 				tests.RunVMIAndExpectLaunch(vmi, 90)
 
 				CheckIsoVolumeSizes(vmi)
@@ -160,9 +164,13 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 			})
 
 			It("[test_id:783]Should start VMI with multiple ConfigMaps", func() {
-				vmi := tests.NewRandomVMIWithConfigMap(configMaps[0])
-				tests.AddConfigMapDisk(vmi, configMaps[1], configMaps[1])
-				tests.AddConfigMapDisk(vmi, configMaps[2], configMaps[2])
+				vmi := libvmi.NewAlpine(
+					libvmi.WithConfigMap(configMaps[0], configMaps[0], ""),
+					libvmi.WithConfigMap(configMaps[1], configMaps[1], ""),
+					libvmi.WithConfigMap(configMaps[2], configMaps[2], ""))
+				//vmi := tests.NewRandomVMIWithConfigMap(configMaps[0])
+				//tests.AddConfigMapDisk(vmi, configMaps[1], configMaps[1])
+				//tests.AddConfigMapDisk(vmi, configMaps[2], configMaps[2])
 
 				tests.RunVMIAndExpectLaunch(vmi, 90)
 				CheckIsoVolumeSizes(vmi)
@@ -197,7 +205,9 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				expectedOutput := "adminredhat"
 
 				By("Running VMI")
-				vmi := tests.NewRandomVMIWithSecret(secretName)
+				//vmi := tests.NewRandomVMIWithSecret(secretName)
+				volumeName := secretName
+				vmi := libvmi.NewAlpine(libvmi.WithSecret(secretName, volumeName, ""))
 				tests.RunVMIAndExpectLaunch(vmi, 90)
 
 				CheckIsoVolumeSizes(vmi)
@@ -253,9 +263,15 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 			})
 
 			It("[test_id:780]Should start VMI with multiple Secrets", func() {
-				vmi := tests.NewRandomVMIWithSecret(secrets[0])
-				tests.AddSecretDisk(vmi, secrets[1], secrets[1])
-				tests.AddSecretDisk(vmi, secrets[2], secrets[2])
+				//vmi := tests.NewRandomVMIWithSecret(secrets[0])
+				//volumeName := secrets[0]
+				vmi := libvmi.NewAlpine(
+					libvmi.WithSecret(secrets[0], secrets[0], ""),
+					libvmi.WithSecret(secrets[1], secrets[1], ""),
+					libvmi.WithSecret(secrets[2], secrets[2], ""))
+
+				//tests.AddSecretDisk(vmi, secrets[1], secrets[1])
+				//tests.AddSecretDisk(vmi, secrets[2], secrets[2])
 
 				tests.RunVMIAndExpectLaunch(vmi, 90)
 				CheckIsoVolumeSizes(vmi)
