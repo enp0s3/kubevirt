@@ -52,6 +52,42 @@ func WithContainerImage(name string) Option {
 	}
 }
 
+func WithConfigMap(name, volumeName, volumeLabel string) Option {
+	return func(vmi *v1.VirtualMachineInstance) {
+		vmi.Spec.Volumes = append(vmi.Spec.Volumes, v1.Volume{
+			Name: volumeName,
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: k8sv1.LocalObjectReference{
+						Name: name,
+					},
+					VolumeLabel: volumeLabel,
+				},
+			},
+		})
+		vmi.Spec.Domain.Devices.Disks = append(vmi.Spec.Domain.Devices.Disks, v1.Disk{
+			Name: volumeName,
+		})
+	}
+}
+
+func WithSecret(name, volumeName, volumeLabel string) Option {
+	return func(vmi *v1.VirtualMachineInstance) {
+		vmi.Spec.Volumes = append(vmi.Spec.Volumes, v1.Volume{
+			Name: volumeName,
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName:  name,
+					VolumeLabel: volumeLabel,
+				},
+			},
+		})
+		vmi.Spec.Domain.Devices.Disks = append(vmi.Spec.Domain.Devices.Disks, v1.Disk{
+			Name: volumeName,
+		})
+	}
+}
+
 func addDisk(vmi *v1.VirtualMachineInstance, disk v1.Disk) {
 	if !diskExists(vmi, disk) {
 		vmi.Spec.Domain.Devices.Disks = append(vmi.Spec.Domain.Devices.Disks, disk)
