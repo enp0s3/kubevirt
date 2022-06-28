@@ -47,7 +47,7 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 	var virtClient kubecli.KubevirtClient
 
 	var CheckIsoVolumeSizes = func(vmi *v1.VirtualMachineInstance) {
-		pod := tests.GetRunningPodByVirtualMachineInstance(vmi, vmi.Namespace)
+		pod := tests.GetRunningPodByVirtualMachineInstance(vmi, util.NamespaceTestDefault)
 
 		for _, volume := range vmi.Spec.Volumes {
 			var path = ""
