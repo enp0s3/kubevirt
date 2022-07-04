@@ -24,6 +24,8 @@ import (
 	"strings"
 	"time"
 
+	k8sv1 "k8s.io/api/core/v1"
+
 	"kubevirt.io/kubevirt/tests/libvmi"
 
 	expect "github.com/google/goexpect"
@@ -69,6 +71,115 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 			}
 		}
 	}
+	withSecret := func(secretName string, customLabel ...string) libvmi.Option {
+		volumeLabel := ""
+		if len(customLabel) > 0 {
+			volumeLabel = customLabel[0]
+		}
+		return func(vmi *v1.VirtualMachineInstance) {
+			vmi.Spec.Volumes = append(vmi.Spec.Volumes, v1.Volume{
+				Name: secretName,
+				VolumeSource: v1.VolumeSource{
+					Secret: &v1.SecretVolumeSource{
+						SecretName:  secretName,
+						VolumeLabel: volumeLabel,
+					},
+				},
+			})
+			vmi.Spec.Domain.Devices.Disks = append(vmi.Spec.Domain.Devices.Disks, v1.Disk{
+				Name: secretName,
+			})
+		}
+	}
+
+	withConfigMap := func(configMapName string, customLabel ...string) libvmi.Option {
+		volumeLabel := ""
+		if len(customLabel) > 0 {
+			volumeLabel = customLabel[0]
+		}
+		return func(vmi *v1.VirtualMachineInstance) {
+			vmi.Spec.Volumes = append(vmi.Spec.Volumes, v1.Volume{
+				Name: configMapName,
+				VolumeSource: v1.VolumeSource{
+					ConfigMap: &v1.ConfigMapVolumeSource{
+						LocalObjectReference: k8sv1.LocalObjectReference{
+							Name: configMapName,
+						},
+						VolumeLabel: volumeLabel,
+					},
+				},
+			})
+			vmi.Spec.Domain.Devices.Disks = append(vmi.Spec.Domain.Devices.Disks, v1.Disk{
+				Name: configMapName,
+			})
+		}
+
+	}
+
+	withDefaultServiceAccount := func() libvmi.Option {
+		serviceAccountName := "default"
+		return func(vmi *v1.VirtualMachineInstance) {
+			vmi.Spec.Volumes = append(vmi.Spec.Volumes, v1.Volume{
+				Name: serviceAccountName + "-disk",
+				VolumeSource: v1.VolumeSource{
+					ServiceAccount: &v1.ServiceAccountVolumeSource{
+						ServiceAccountName: serviceAccountName,
+					},
+				},
+			})
+			vmi.Spec.Domain.Devices.Disks = append(vmi.Spec.Domain.Devices.Disks, v1.Disk{
+				Name: serviceAccountName + "-disk",
+			})
+		}
+	}
+
+	/*func AddLabelDownwardAPIVolume(vmi *v1.VirtualMachineInstance, volumeName string) {
+		vmi.Spec.Volumes = append(vmi.Spec.Volumes, v1.Volume{
+			Name: volumeName,
+			VolumeSource: v1.VolumeSource{
+				DownwardAPI: &v1.DownwardAPIVolumeSource{
+					Fields: []k8sv1.DownwardAPIVolumeFile{
+						{
+							Path: "labels",
+							FieldRef: &k8sv1.ObjectFieldSelector{
+								FieldPath: "metadata.labels",
+							},
+						},
+					},
+					VolumeLabel: "",
+				},
+			},
+		})
+
+		vmi.Spec.Domain.Devices.Disks = append(vmi.Spec.Domain.Devices.Disks, v1.Disk{
+			Name: volumeName,
+		})
+	}*/
+
+	withDownwardAPI := func(name string) libvmi.Option {
+		return func(vmi *v1.VirtualMachineInstance) {
+			vmi.Spec.Volumes = append(vmi.Spec.Volumes, v1.Volume{
+				Name: name,
+				VolumeSource: v1.VolumeSource{
+					DownwardAPI: &v1.DownwardAPIVolumeSource{
+						Fields: []k8sv1.DownwardAPIVolumeFile{
+							{
+								Path: "labels",
+								FieldRef: &k8sv1.ObjectFieldSelector{
+									FieldPath: "metadata.labels",
+								},
+							},
+						},
+						VolumeLabel: "",
+					},
+				},
+			})
+
+			vmi.Spec.Domain.Devices.Disks = append(vmi.Spec.Domain.Devices.Disks, v1.Disk{
+				Name: name,
+			})
+		}
+	}
 
 	BeforeEach(func() {
 		var err error
@@ -105,9 +216,7 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				expectedOutput := "value1value2value3"
 
 				By("Running VMI")
-				//vmi := tests.NewRandomVMIWithConfigMap(configMapName)
-				volumeName := configMapName
-				vmi := libvmi.NewAlpine(libvmi.WithConfigMap(configMapName, volumeName, ""))
+				vmi := libvmi.NewAlpine(withConfigMap(configMapName))
 				tests.RunVMIAndExpectLaunch(vmi, 90)
 
 				CheckIsoVolumeSizes(vmi)
@@ -165,12 +274,9 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 
 			It("[test_id:783]Should start VMI with multiple ConfigMaps", func() {
 				vmi := libvmi.NewAlpine(
-					libvmi.WithConfigMap(configMaps[0], configMaps[0], ""),
-					libvmi.WithConfigMap(configMaps[1], configMaps[1], ""),
-					libvmi.WithConfigMap(configMaps[2], configMaps[2], ""))
-				//vmi := tests.NewRandomVMIWithConfigMap(configMaps[0])
-				//tests.AddConfigMapDisk(vmi, configMaps[1], configMaps[1])
-				//tests.AddConfigMapDisk(vmi, configMaps[2], configMaps[2])
+					withConfigMap(configMaps[0]),
+					withConfigMap(configMaps[1]),
+					withConfigMap(configMaps[2]))
 
 				tests.RunVMIAndExpectLaunch(vmi, 90)
 				CheckIsoVolumeSizes(vmi)
@@ -205,9 +311,7 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				expectedOutput := "adminredhat"
 
 				By("Running VMI")
-				//vmi := tests.NewRandomVMIWithSecret(secretName)
-				volumeName := secretName
-				vmi := libvmi.NewAlpine(libvmi.WithSecret(secretName, volumeName, ""))
+				vmi := libvmi.NewAlpine(withSecret(secretName))
 				tests.RunVMIAndExpectLaunch(vmi, 90)
 
 				CheckIsoVolumeSizes(vmi)
@@ -266,12 +370,9 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				//vmi := tests.NewRandomVMIWithSecret(secrets[0])
 				//volumeName := secrets[0]
 				vmi := libvmi.NewAlpine(
-					libvmi.WithSecret(secrets[0], secrets[0], ""),
-					libvmi.WithSecret(secrets[1], secrets[1], ""),
-					libvmi.WithSecret(secrets[2], secrets[2], ""))
-
-				//tests.AddSecretDisk(vmi, secrets[1], secrets[1])
-				//tests.AddSecretDisk(vmi, secrets[2], secrets[2])
+					withSecret(secrets[0]),
+					withSecret(secrets[1]),
+					withSecret(secrets[2]))
 
 				tests.RunVMIAndExpectLaunch(vmi, 90)
 				CheckIsoVolumeSizes(vmi)
@@ -286,7 +387,8 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 
 		It("[test_id:998]Should be the namespace and token the same for a pod and vmi", func() {
 			By("Running VMI")
-			vmi := tests.NewRandomVMIWithServiceAccount("default")
+			//vmi := tests.NewRandomVMIWithServiceAccount("default")
+			vmi := libvmi.NewAlpine(withDefaultServiceAccount())
 			tests.RunVMIAndExpectLaunch(vmi, 90)
 			CheckIsoVolumeSizes(vmi)
 
@@ -558,14 +660,15 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 
 		It("[test_id:790]Should be the namespace and token the same for a pod and vmi", func() {
 			By("Running VMI")
-			vmi := tests.NewRandomVMIWithPVC(tests.DiskAlpineHostPath)
+			//vmi := tests.NewRandomVMIWithPVC(tests.DiskAlpineHostPath)
 			//Add the testing label to the VMI
+			vmi := libvmi.NewAlpine(withDownwardAPI(downwardAPIName))
 			if vmi.ObjectMeta.Labels == nil {
 				vmi.ObjectMeta.Labels = map[string]string{testLabelKey: testLabelVal}
 			} else {
 				vmi.ObjectMeta.Labels[testLabelKey] = testLabelVal
 			}
-			tests.AddLabelDownwardAPIVolume(vmi, downwardAPIName)
+			//tests.AddLabelDownwardAPIVolume(vmi, downwardAPIName)
 
 			tests.RunVMIAndExpectLaunch(vmi, 90)
 			CheckIsoVolumeSizes(vmi)
