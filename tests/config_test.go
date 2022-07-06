@@ -43,7 +43,7 @@ import (
 	"kubevirt.io/kubevirt/tests/console"
 )
 
-var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][level:component][sig-compute]Config", func() {
+var _ = Describe("[rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][level:component][sig-compute]Config", func() {
 
 	var virtClient kubecli.KubevirtClient
 
@@ -292,7 +292,6 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				vmi, err := virtClient.VirtualMachineInstance(util.NamespaceTestDefault).Create(vmi)
 				Expect(err).ToNot(HaveOccurred())
 				vmi = tests.WaitUntilVMIReady(vmi, console.LoginToAlpine)
-				//tests.RunVMIAndExpectLaunch(vmi, 90)
 
 				CheckIsoVolumeSizes(vmi)
 
@@ -345,8 +344,6 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 			})
 
 			It("[test_id:780]Should start VMI with multiple Secrets", func() {
-				//vmi := tests.NewRandomVMIWithSecret(secrets[0])
-				//volumeName := secrets[0]
 				vmi := libvmi.NewAlpine(
 					withSecret(secrets[0], secrets[0]),
 					withSecret(secrets[1], secrets[1]),
@@ -365,12 +362,10 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 
 		It("[test_id:998]Should be the namespace and token the same for a pod and vmi", func() {
 			By("Running VMI")
-			//vmi := tests.NewRandomVMIWithServiceAccount("default")
 			vmi := libvmi.NewAlpine(withDefaultServiceAccount())
 			vmi, err := virtClient.VirtualMachineInstance(util.NamespaceTestDefault).Create(vmi)
 			Expect(err).ToNot(HaveOccurred())
 			vmi = tests.WaitUntilVMIReady(vmi, console.LoginToAlpine)
-			//tests.RunVMIAndExpectLaunch(vmi, 90)
 
 			CheckIsoVolumeSizes(vmi)
 
@@ -457,14 +452,6 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				expectedOutputSecret := "adminredhat"
 
 				By("Running VMI")
-
-				//vmi := tests.NewRandomVMIWithEphemeralDiskHighMemory(
-				//	cd.ContainerDiskFor(
-				//		cd.ContainerDiskFedoraTestTooling))
-				//tests.AddConfigMapDisk(vmi, configMapName, configMapName)
-				//tests.AddSecretDisk(vmi, secretName, secretName)
-				//tests.AddConfigMapDiskWithCustomLabel(vmi, configMapName, "random1", "configlabel")
-				//tests.AddSecretDiskWithCustomLabel(vmi, secretName, "random2", "secretlabel")
 				vmi := libvmi.NewFedora(withConfigMap(configMapName, configMapName),
 					withSecret(secretName, secretName),
 					withConfigMap(configMapName, "random1", "configlabel"),
@@ -482,8 +469,6 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				vmi, err := virtClient.VirtualMachineInstance(util.NamespaceTestDefault).Create(vmi)
 				Expect(err).ToNot(HaveOccurred())
 				vmi = tests.WaitUntilVMIReady(vmi, console.LoginToFedora)
-
-				//vmi = tests.RunVMIAndExpectLaunch(vmi, 90)
 
 				CheckIsoVolumeSizes(vmi)
 
@@ -588,12 +573,6 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 				expectedPublicKey := string(publicKeyBytes)
 
 				By("Running VMI")
-				//vmi := tests.NewRandomVMIWithEphemeralDiskHighMemory(
-				//	cd.ContainerDiskFor(
-				//		cd.ContainerDiskFedoraTestTooling))
-				//tests.AddSecretDisk(vmi, secretName, secretName)
-				//vmi = tests.RunVMIAndExpectLaunch(vmi, 90)
-
 				vmi := libvmi.NewAlpine(withSecret(secretName, secretName))
 				vmi, err := virtClient.VirtualMachineInstance(util.NamespaceTestDefault).Create(vmi)
 				Expect(err).ToNot(HaveOccurred())
@@ -654,7 +633,6 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 
 		It("[test_id:790]Should be the namespace and token the same for a pod and vmi", func() {
 			By("Running VMI")
-			//vmi := tests.NewRandomVMIWithPVC(tests.DiskAlpineHostPath)
 			//Add the testing label to the VMI
 			vmi := libvmi.NewAlpine(withDownwardAPI(downwardAPIName))
 			if vmi.ObjectMeta.Labels == nil {
@@ -662,12 +640,11 @@ var _ = Describe("[Serial][rfe_id:899][crit:medium][vendor:cnv-qe@redhat.com][le
 			} else {
 				vmi.ObjectMeta.Labels[testLabelKey] = testLabelVal
 			}
-			//tests.AddLabelDownwardAPIVolume(vmi, downwardAPIName)
+
 			vmi, err := virtClient.VirtualMachineInstance(util.NamespaceTestDefault).Create(vmi)
 			Expect(err).ToNot(HaveOccurred())
 			vmi = tests.WaitUntilVMIReady(vmi, console.LoginToAlpine)
 
-			//tests.RunVMIAndExpectLaunch(vmi, 90)
 			CheckIsoVolumeSizes(vmi)
 
 			By("Checking if DownwardAPI has been attached to the pod")
