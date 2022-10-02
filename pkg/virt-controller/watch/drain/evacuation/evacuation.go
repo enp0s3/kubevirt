@@ -2,7 +2,6 @@ package evacuation
 
 import (
 	"fmt"
-	"math"
 	"sync"
 	"time"
 
@@ -374,47 +373,48 @@ func (c *EvacuationController) sync(node *k8sv1.Node, vmisOnNode []*virtv1.Virtu
 		return nil
 	}
 
-	migrationCandidates, nonMigrateable := c.filterRunningNonMigratingVMIs(vmisToMigrate, activeMigrations)
-
-	// Don't create hundreds of pending migration objects.
-	// This is just best-effort and is *not* intended to not overload the cluster.
-	// It is possible that more migrations than the limit are created because of evacuations on other nodes.
-	// The migration controller needs to limit itself to a reasonable number of running migrations
-	maxParallelMigrations := int(*c.clusterConfig.GetMigrationConfiguration().ParallelMigrationsPerCluster)
-	if len(activeMigrations) >= maxParallelMigrations {
-		// We have to re-enqueue if some work is left, since migrations from other controllers or workers` don't wake us up again
-		if len(migrationCandidates) > 0 || len(nonMigrateable) > 0 {
-			c.Queue.AddAfter(node.Name, 5*time.Second)
-		}
-		return nil
-	}
-	freeSpots := maxParallelMigrations - len(activeMigrations)
-	diff := int(math.Min(float64(freeSpots), float64(len(migrationCandidates))))
-	remaining := freeSpots - diff
-	remainingForNonMigrateableDiff := int(math.Min(float64(remaining), float64(len(nonMigrateable))))
-
-	if remainingForNonMigrateableDiff > 0 {
-		// for all non-migrating VMIs which would get e spot emit a warning
-		for _, vmi := range nonMigrateable[0:remainingForNonMigrateableDiff] {
-			c.recorder.Eventf(vmi, k8sv1.EventTypeNormal, FailedCreateVirtualMachineInstanceMigrationReason, "VirtualMachineInstance is not migrateable")
-		}
-
-	}
-
-	if diff == 0 {
-		if remainingForNonMigrateableDiff > 0 {
-			// Let's ensure that some warnings will stay in the event log and periodically update
-			// In theory the warnings could disappear after one hour if nothing else updates
-			c.Queue.AddAfter(node.Name, 1*time.Minute)
-		}
-		// nothing to do
-		return nil
-	}
-
-	// TODO: should the order be randomized?
-	selectedCandidates := migrationCandidates[0:diff]
-
-	log.DefaultLogger().Infof("node: %v, migrations: %v, candidates: %v, selected: %v", node.Name, len(activeMigrations), len(migrationCandidates), len(selectedCandidates))
+	migrationCandidates, _ := c.filterRunningNonMigratingVMIs(vmisToMigrate, activeMigrations)
+	diff := len(migrationCandidates)
+	//
+	//// Don't create hundreds of pending migration objects.
+	//// This is just best-effort and is *not* intended to not overload the cluster.
+	//// It is possible that more migrations than the limit are created because of evacuations on other nodes.
+	//// The migration controller needs to limit itself to a reasonable number of running migrations
+	//maxParallelMigrations := int(*c.clusterConfig.GetMigrationConfiguration().ParallelMigrationsPerCluster)
+	//if len(activeMigrations) >= maxParallelMigrations {
+	//	// We have to re-enqueue if some work is left, since migrations from other controllers or workers` don't wake us up again
+	//	if len(migrationCandidates) > 0 || len(nonMigrateable) > 0 {
+	//		c.Queue.AddAfter(node.Name, 5*time.Second)
+	//	}
+	//	return nil
+	//}
+	//freeSpots := maxParallelMigrations - len(activeMigrations)
+	//diff := int(math.Min(float64(freeSpots), float64(len(migrationCandidates))))
+	//remaining := freeSpots - diff
+	//remainingForNonMigrateableDiff := int(math.Min(float64(remaining), float64(len(nonMigrateable))))
+	//
+	//if remainingForNonMigrateableDiff > 0 {
+	//	// for all non-migrating VMIs which would get e spot emit a warning
+	//	for _, vmi := range nonMigrateable[0:remainingForNonMigrateableDiff] {
+	//		c.recorder.Eventf(vmi, k8sv1.EventTypeNormal, FailedCreateVirtualMachineInstanceMigrationReason, "VirtualMachineInstance is not migrateable")
+	//	}
+	//
+	//}
+	//
+	//if diff == 0 {
+	//	if remainingForNonMigrateableDiff > 0 {
+	//		// Let's ensure that some warnings will stay in the event log and periodically update
+	//		// In theory the warnings could disappear after one hour if nothing else updates
+	//		c.Queue.AddAfter(node.Name, 1*time.Minute)
+	//	}
+	//	// nothing to do
+	//	return nil
+	//}
+	//
+	//// TODO: should the order be randomized?
+	//selectedCandidates := migrationCandidates[0:diff]
+	//
+	//log.DefaultLogger().Infof("node: %v, migrations: %v, candidates: %v, selected: %v", node.Name, len(activeMigrations), len(migrationCandidates), len(selectedCandidates))
 
 	wg := &sync.WaitGroup{}
 	wg.Add(diff)
@@ -422,7 +422,7 @@ func (c *EvacuationController) sync(node *k8sv1.Node, vmisOnNode []*virtv1.Virtu
 	errChan := make(chan error, diff)
 
 	c.migrationExpectations.ExpectCreations(node.Name, diff)
-	for _, vmi := range selectedCandidates {
+	for _, vmi := range migrationCandidates {
 		go func(vmi *virtv1.VirtualMachineInstance) {
 			defer wg.Done()
 			createdMigration, err := c.clientset.VirtualMachineInstanceMigration(vmi.Namespace).Create(GenerateNewMigration(vmi.Name, node.Name), &v1.CreateOptions{})
