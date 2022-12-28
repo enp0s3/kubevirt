@@ -21,10 +21,7 @@ package mutators
 
 import (
 	k8sv1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/tools/cache"
-
 	kubev1 "kubevirt.io/api/core/v1"
-	"kubevirt.io/client-go/log"
 )
 
 func memoryOrCpuIsMissing(resource k8sv1.ResourceList) bool {
@@ -44,44 +41,44 @@ func isResourceRequirementMissing(resourceRequirements kubev1.ResourceRequiremen
 	return memoryOrCpuIsMissing(resourceRequirements.Limits) || memoryOrCpuIsMissing(resourceRequirements.Requests)
 }
 
-func applyNamespaceLimitRangeValues(vmi *kubev1.VirtualMachineInstance, limitrangeInformer cache.SharedIndexInformer, namespace string) {
-	// Copy namespace limits (if exist) to the VM spec
-	if isResourceRequirementMissing(vmi.Spec.Domain.Resources) {
-		limits, err := limitrangeInformer.GetIndexer().ByIndex(cache.NamespaceIndex, namespace)
-		if err != nil {
-			return
-		}
-
-		log.Log.Object(vmi).V(4).Info("Apply namespace limits")
-		for _, limit := range limits {
-			defaultRequirements := defaultVMIResourceRequirements(limit.(*k8sv1.LimitRange))
-			mergeVMIResources(vmi, &defaultRequirements)
-		}
-	}
-}
-
-// See mergeContainerResources in https://github.com/kubernetes/kubernetes/blob/master/plugin/pkg/admission/limitranger/admission.go
-func mergeVMIResources(vmi *kubev1.VirtualMachineInstance, defaultRequirements *k8sv1.ResourceRequirements) {
-	if vmi.Spec.Domain.Resources.Limits == nil {
-		vmi.Spec.Domain.Resources.Limits = k8sv1.ResourceList{}
-	}
-	if vmi.Spec.Domain.Resources.Requests == nil {
-		vmi.Spec.Domain.Resources.Requests = k8sv1.ResourceList{}
-	}
-	// TODO: generate annotations like limitranger admission-plugin in kubernetes
-	for k, v := range defaultRequirements.Limits {
-		_, found := vmi.Spec.Domain.Resources.Limits[k]
-		if !found {
-			vmi.Spec.Domain.Resources.Limits[k] = v
-		}
-	}
-	for k, v := range defaultRequirements.Requests {
-		_, found := vmi.Spec.Domain.Resources.Requests[k]
-		if !found {
-			vmi.Spec.Domain.Resources.Requests[k] = v
-		}
-	}
-}
+//func applyNamespaceLimitRangeValues(vmi *kubev1.VirtualMachineInstance, limitrangeInformer cache.SharedIndexInformer, namespace string) {
+//	// Copy namespace limits (if exist) to the VM spec
+//	if isResourceRequirementMissing(vmi.Spec.Domain.Resources) {
+//		limits, err := limitrangeInformer.GetIndexer().ByIndex(cache.NamespaceIndex, namespace)
+//		if err != nil {
+//			return
+//		}
+//
+//		log.Log.Object(vmi).V(4).Info("Apply namespace limits")
+//		for _, limit := range limits {
+//			defaultRequirements := defaultVMIResourceRequirements(limit.(*k8sv1.LimitRange))
+//			mergeVMIResources(vmi, &defaultRequirements)
+//		}
+//	}
+//}
+//
+//// See mergeContainerResources in https://github.com/kubernetes/kubernetes/blob/master/plugin/pkg/admission/limitranger/admission.go
+//func mergeVMIResources(vmi *kubev1.VirtualMachineInstance, defaultRequirements *k8sv1.ResourceRequirements) {
+//	if vmi.Spec.Domain.Resources.Limits == nil {
+//		vmi.Spec.Domain.Resources.Limits = k8sv1.ResourceList{}
+//	}
+//	if vmi.Spec.Domain.Resources.Requests == nil {
+//		vmi.Spec.Domain.Resources.Requests = k8sv1.ResourceList{}
+//	}
+//	// TODO: generate annotations like limitranger admission-plugin in kubernetes
+//	for k, v := range defaultRequirements.Limits {
+//		_, found := vmi.Spec.Domain.Resources.Limits[k]
+//		if !found {
+//			vmi.Spec.Domain.Resources.Limits[k] = v
+//		}
+//	}
+//	for k, v := range defaultRequirements.Requests {
+//		_, found := vmi.Spec.Domain.Resources.Requests[k]
+//		if !found {
+//			vmi.Spec.Domain.Resources.Requests[k] = v
+//		}
+//	}
+//}
 
 // See defaultContainerResourceRequirements in https://github.com/kubernetes/kubernetes/blob/master/plugin/pkg/admission/limitranger/admission.go
 func defaultVMIResourceRequirements(limitRange *k8sv1.LimitRange) k8sv1.ResourceRequirements {
