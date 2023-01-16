@@ -234,40 +234,31 @@ func (metrics *vmiMetrics) updateCPUAffinity(cpuMap [][]bool) {
 	)
 }
 
-func (metrics *vmiMetrics) updateCPU(cpu *stats.DomainStatsCpu) {
-	if cpu.SystemSet {
+func (metrics *vmiMetrics) updateCPU(domainCPUStats *stats.DomainStatsCPU) {
+	if domainCPUStats.TimeSet {
 		metrics.pushCommonMetric(
-			"kubevirt_vmi_cpu_system_seconds_total",
-			"system cpu time spent in seconds.",
-			prometheus.CounterValue,
-			float64(cpu.System/1000000000),
-		)
-	}
-
-	if cpu.UserSet {
-		metrics.pushCommonMetric(
-			"kubevirt_vmi_cpu_user_seconds_total",
-			"user cpu time spent in seconds.",
-			prometheus.CounterValue,
-			float64(cpu.User/1000000000),
-		)
-	}
-
-	if cpu.TimeSet {
-		metrics.pushCommonMetric(
-			"kubevirt_vmi_cpu_usage_seconds_total",
-			"total cpu time spent for this domain in seconds.",
-			prometheus.CounterValue,
-			float64(cpu.Time/1000000000),
-		)
-	}
-
-	if cpu.CpuTimePercentSet {
-		metrics.pushCommonMetric(
-			"kubevirt_vmi_cpu_total_percent",
-			"Gets the percentage of total available CPU.",
+			"kubevirt_vmi_cpu_usage_seconds",
+			"Total CPU time spent in all modes.",
 			prometheus.GaugeValue,
-			float64(cpu.CpuTimePercent),
+			float64(domainCPUStats.Time/1000000000),
+		)
+	}
+
+	if domainCPUStats.UserSet {
+		metrics.pushCommonMetric(
+			"kubevirt_vmi_cpu_user_usage_seconds",
+			"Total CPU time spent in user mode.",
+			prometheus.GaugeValue,
+			float64(domainCPUStats.User/1000000000),
+		)
+	}
+
+	if domainCPUStats.SystemSet {
+		metrics.pushCommonMetric(
+			"kubevirt_vmi_cpu_system_usage_seconds",
+			"Total CPU time spent in system mode.",
+			prometheus.GaugeValue,
+			float64(domainCPUStats.System/1000000000),
 		)
 	}
 }

@@ -158,9 +158,7 @@ var Testdataexpected = `{
      "TimeSet": true, 
      "User": 1620000000, 
      "UserSet": true,
-     "CpuTimePercentSet": false,
-     "CpuTimePercent": 0
-   }, 
+   },
    "Memory": {
      "ActualBalloon": 0, 
      "ActualBalloonSet": false, 
