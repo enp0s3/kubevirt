@@ -234,7 +234,11 @@ func (metrics *vmiMetrics) updateCPUAffinity(cpuMap [][]bool) {
 	)
 }
 
-func (metrics *vmiMetrics) updateCPU(domainCPUStats *stats.DomainStatsCPU) {
+func (metrics *vmiMetrics) updateCPU(vmi *k6tv1.VirtualMachineInstance, domainCPUStats *stats.DomainStatsCPU) {
+	if !domainCPUStats.TimeSet && !domainCPUStats.UserSet && !domainCPUStats.SystemSet {
+		log.Log.V(4).Warningf("No domain CPU stats is set for %s VMI.", vmi.Name)
+	}
+
 	if domainCPUStats.TimeSet {
 		metrics.pushCommonMetric(
 			"kubevirt_vmi_cpu_usage_seconds",
@@ -666,7 +670,7 @@ func (ps *prometheusScraper) Report(socketFile string, vmi *k6tv1.VirtualMachine
 	}()
 
 	vmiMetrics := newVmiMetrics(vmi, ps.ch)
-	vmiMetrics.updateMetrics(vmStats)
+	vmiMetrics.updateMetrics(vmi, vmStats)
 }
 
 func Handler(MaxRequestsInFlight int) http.Handler {
@@ -687,11 +691,11 @@ type vmiMetrics struct {
 	ch             chan<- prometheus.Metric
 }
 
-func (metrics *vmiMetrics) updateMetrics(vmStats *VirtualMachineInstanceStats) {
+func (metrics *vmiMetrics) updateMetrics(vmi *k6tv1.VirtualMachineInstance, vmStats *VirtualMachineInstanceStats) {
 	metrics.updateKubernetesLabels()
 
 	metrics.updateMemory(vmStats.DomainStats.Memory)
-	metrics.updateCPU(vmStats.DomainStats.Cpu)
+	metrics.updateCPU(vmi, vmStats.DomainStats.Cpu)
 	metrics.updateVcpu(vmStats.DomainStats.Vcpu)
 	metrics.updateBlock(vmStats.DomainStats.Block)
 	metrics.updateNetwork(vmStats.DomainStats.Net)
