@@ -1188,21 +1188,14 @@ var _ = Describe("Prometheus", func() {
 			Expect(ch).To(BeEmpty())
 		})
 
-		It("should expose CPU usage metrics", func() {
-			ch := make(chan prometheus.Metric, 3)
+		FDescribeTable("CPU metrics", func(metricName string, MetricValue float64, stats *stats.DomainStatsCPU) {
+			ch := make(chan prometheus.Metric)
 			defer close(ch)
 
 			ps := prometheusScraper{ch: ch}
 
 			domainStats := &stats.DomainStats{
-				Cpu: &stats.DomainStatsCPU{
-					TimeSet:   true,
-					Time:      123000000000,
-					UserSet:   true,
-					User:      456000000000,
-					SystemSet: true,
-					System:    789000000000,
-				},
+				Cpu:    stats,
 				Memory: &stats.DomainStatsMemory{},
 				Net:    []stats.DomainStatsNet{},
 				Vcpu:   []stats.DomainStatsVcpu{},
@@ -1211,21 +1204,27 @@ var _ = Describe("Prometheus", func() {
 			vmi := k6tv1.VirtualMachineInstance{}
 			ps.Report("test", &vmi, newVmStats(domainStats, nil))
 
-			metrics := map[string]float64{
-				"kubevirt_vmi_cpu_usage_seconds":        123,
-				"kubevirt_vmi_cpu_user_usage_seconds":   456,
-				"kubevirt_vmi_cpu_system_usage_seconds": 789,
-			}
+			result := <-ch
+			Expect(result).ToNot(BeNil())
+			Expect(result.Desc().String()).To(ContainSubstring(metricName))
 
-			for k, v := range metrics {
-				result := <-ch
-				Expect(result).ToNot(BeNil())
-				Expect(result.Desc().String()).To(ContainSubstring(k))
+			dto := &io_prometheus_client.Metric{}
+			result.Write(dto)
 
-				dto := &io_prometheus_client.Metric{}
-				result.Write(dto)
-				Expect(dto.GetGauge().GetValue()).To(Equal(v))
-			}
-		})
+			Expect(dto.GetGauge().GetValue()).To(Equal(MetricValue))
+
+		},
+			Entry("usage", "kubevirt_vmi_cpu_usage_seconds", 123, stats.DomainStatsCPU{
+				TimeSet: true,
+				time:    123000000000},
+			),
+			Entry("usage", "kubevirt_vmi_cpu_usage_seconds", 456, stats.DomainStatsCPU{
+				UserSet: true,
+				User:    456000000000},
+			),
+			Entry("usage", "kubevirt_vmi_cpu_usage_seconds", 789, stats.DomainStatsCPU{
+				SystemSet: true,
+				Syatem:    789000000000},
+			),
 	})
 })
