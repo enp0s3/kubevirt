@@ -43,6 +43,8 @@ const (
 	CanaryUpgradeStatusFailed                  CanaryUpgradeStatus = "failed"
 )
 
+const ControllerRevisionHashLabelKey string = "controller-revision-hash"
+
 func (r *Reconciler) syncDeployment(origDeployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 	kv := r.kv
 
@@ -176,15 +178,21 @@ func (r *Reconciler) getCanaryPods(daemonSet *appsv1.DaemonSet) []*corev1.Pod {
 	return canaryPods
 }
 
-func (r *Reconciler) howManyUpdatedAndReadyPods(daemonSet *appsv1.DaemonSet) int32 {
+func (r *Reconciler) howManyUpdatedAndReadyPods(daemonSet *appsv1.DaemonSet, curHash string) int32 {
 	var updatedReadyPods int32
 
 	for _, obj := range r.stores.InfrastructurePodCache.List() {
 		pod := obj.(*corev1.Pod)
 		owner := metav1.GetControllerOf(pod)
 
-		if owner != nil && owner.Name == daemonSet.Name && util.PodIsUpToDate(pod, r.kv) && util.PodIsReady(pod) {
-			updatedReadyPods++
+		if owner != nil && owner.Name == daemonSet.Name {
+			if pod.Labels[ControllerRevisionHashLabelKey] == curHash {
+				continue
+			}
+
+			if util.PodIsUpToDate(pod, r.kv) && util.PodIsReady(pod) {
+				updatedReadyPods++
+			}
 		}
 	}
 	return updatedReadyPods
@@ -199,10 +207,11 @@ func (r *Reconciler) processCanaryUpgrade(cachedDaemonSet, newDS *appsv1.DaemonS
 	var status CanaryUpgradeStatus
 	done := false
 
+	revisionHash := r.currentRevisionHash(newDS)
 	isDaemonSetUpdated := util.DaemonSetIsUpToDate(r.kv, cachedDaemonSet) && !forceUpdate
 	desiredReadyPods := cachedDaemonSet.Status.DesiredNumberScheduled
 	if isDaemonSetUpdated {
-		updatedAndReadyPods = r.howManyUpdatedAndReadyPods(cachedDaemonSet)
+		updatedAndReadyPods = r.howManyUpdatedAndReadyPods(cachedDaemonSet, revisionHash)
 	}
 
 	switch {
@@ -426,4 +435,20 @@ func getDesiredApiReplicas(clientset kubecli.KubevirtClient) (replicas int32, er
 	}
 
 	return replicas, nil
+}
+
+func (r *Reconciler) currentRevisionHash(daemonSet *appsv1.DaemonSet) (currentHash string) {
+	for _, obj := range r.stores.InfrastructurePodCache.List() {
+		pod := obj.(*corev1.Pod)
+		owner := metav1.GetControllerOf(pod)
+
+		if owner != nil && owner.Name == daemonSet.Name {
+			if val, ok := pod.Labels[ControllerRevisionHashLabelKey]; ok {
+				currentHash = val
+				break
+			}
+		}
+	}
+
+	return
 }
