@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"k8s.io/utils/pointer"
 
@@ -178,7 +179,7 @@ func (r *Reconciler) getCanaryPods(daemonSet *appsv1.DaemonSet) []*corev1.Pod {
 	return canaryPods
 }
 
-func (r *Reconciler) howManyUpdatedAndReadyPods(daemonSet *appsv1.DaemonSet, curHash string) int32 {
+func (r *Reconciler) howManyUpdatedAndReadyPods(daemonSet *appsv1.DaemonSet) int32 {
 	var updatedReadyPods int32
 
 	for _, obj := range r.stores.InfrastructurePodCache.List() {
@@ -186,7 +187,7 @@ func (r *Reconciler) howManyUpdatedAndReadyPods(daemonSet *appsv1.DaemonSet, cur
 		owner := metav1.GetControllerOf(pod)
 
 		if owner != nil && owner.Name == daemonSet.Name {
-			if pod.Labels[ControllerRevisionHashLabelKey] == curHash {
+			if pod.Annotations[v1.KubeVirtGenerationAnnotation] != strconv.FormatInt(r.kv.ObjectMeta.GetGeneration(), 10) {
 				continue
 			}
 
@@ -207,11 +208,10 @@ func (r *Reconciler) processCanaryUpgrade(cachedDaemonSet, newDS *appsv1.DaemonS
 	var status CanaryUpgradeStatus
 	done := false
 
-	revisionHash := r.currentRevisionHash(newDS)
 	isDaemonSetUpdated := util.DaemonSetIsUpToDate(r.kv, cachedDaemonSet) && !forceUpdate
 	desiredReadyPods := cachedDaemonSet.Status.DesiredNumberScheduled
 	if isDaemonSetUpdated {
-		updatedAndReadyPods = r.howManyUpdatedAndReadyPods(cachedDaemonSet, revisionHash)
+		updatedAndReadyPods = r.howManyUpdatedAndReadyPods(cachedDaemonSet)
 	}
 
 	switch {
@@ -286,7 +286,7 @@ func (r *Reconciler) syncDaemonSet(daemonSet *appsv1.DaemonSet) (bool, error) {
 	imageTag, imageRegistry, id := getTargetVersionRegistryID(kv)
 
 	injectOperatorMetadata(kv, &daemonSet.ObjectMeta, imageTag, imageRegistry, id, true)
-	injectOperatorMetadata(kv, &daemonSet.Spec.Template.ObjectMeta, imageTag, imageRegistry, id, false)
+	injectOperatorMetadata(kv, &daemonSet.Spec.Template.ObjectMeta, imageTag, imageRegistry, id, true)
 	InjectPlacementMetadata(kv.Spec.Workloads, &daemonSet.Spec.Template.Spec)
 
 	if daemonSet.GetName() == "virt-handler" {
@@ -435,20 +435,4 @@ func getDesiredApiReplicas(clientset kubecli.KubevirtClient) (replicas int32, er
 	}
 
 	return replicas, nil
-}
-
-func (r *Reconciler) currentRevisionHash(daemonSet *appsv1.DaemonSet) (currentHash string) {
-	for _, obj := range r.stores.InfrastructurePodCache.List() {
-		pod := obj.(*corev1.Pod)
-		owner := metav1.GetControllerOf(pod)
-
-		if owner != nil && owner.Name == daemonSet.Name {
-			if val, ok := pod.Labels[ControllerRevisionHashLabelKey]; ok {
-				currentHash = val
-				break
-			}
-		}
-	}
-
-	return
 }
