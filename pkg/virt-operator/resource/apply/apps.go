@@ -44,8 +44,6 @@ const (
 	CanaryUpgradeStatusFailed                  CanaryUpgradeStatus = "failed"
 )
 
-const ControllerRevisionHashLabelKey string = "controller-revision-hash"
-
 func (r *Reconciler) syncDeployment(origDeployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 	kv := r.kv
 
