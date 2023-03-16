@@ -93,6 +93,7 @@ func SynchronizedBeforeTestSetup() []byte {
 
 	EnsureKVMPresent()
 	AdjustKubeVirtResource()
+	EnsureKubevirtReady()
 
 	return nil
 }
@@ -137,6 +138,9 @@ func EnsureKubevirtReady() {
 	virtClient := kubevirt.Client()
 	kv := util.GetCurrentKv(virtClient)
 
+	Eventually(matcher.ThisDeploymentWith(flags.KubeVirtInstallNamespace, "virt-operator"), 180*time.Second, 1*time.Second).
+		Should(matcher.HaveReadyReplicasNumerically(">", 0))
+
 	Eventually(func() *v1.KubeVirt {
 		kv, err := virtClient.KubeVirt(kv.Namespace).Get(kv.Name, &metav1.GetOptions{})
 		Expect(err).ToNot(HaveOccurred())
@@ -146,6 +150,9 @@ func EnsureKubevirtReady() {
 			matcher.HaveConditionTrue(v1.KubeVirtConditionAvailable),
 			matcher.HaveConditionFalse(v1.KubeVirtConditionProgressing),
 			matcher.HaveConditionFalse(v1.KubeVirtConditionDegraded),
+			WithTransform(func(kv *v1.KubeVirt) bool {
+				return kv.ObjectMeta.Generation == *kv.Status.ObservedGeneration
+			}, BeTrue()),
 		))
 
 }
