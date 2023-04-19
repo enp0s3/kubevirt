@@ -109,9 +109,6 @@ const (
 	ProductComponentKey = "productComponent"
 	ProductVersionKey   = "productVersion"
 
-	// the regex used to parse the operator image
-	operatorImageRegex = "^(.*)/(.*)virt-operator([@:].*)?$"
-
 	// #nosec 101, the variable is not holding any credential
 	// Prefix for env vars that will be passed along
 	PassthroughEnvPrefix = "KV_IO_EXTRA_ENV_"
@@ -283,46 +280,37 @@ func getConfig(registry, tag, namespace string, additionalProperties map[string]
 
 	// get registry and tag/shasum from operator image
 	imageString := GetOperatorImageWithEnvVarManager(envVarManager)
-	imageRegEx := regexp.MustCompile(operatorImageRegex)
-	matches := imageRegEx.FindAllStringSubmatch(imageString, 1)
+
+	imageParser := &OperatorImageParser{}
+	imageParser.Parse(imageString)
+
 	kubeVirtVersion := envVarManager.Getenv(KubeVirtVersionEnvName)
 
-	tagFromOperator := ""
-	operatorSha := ""
+	operatorSha := imageParser.GetDigest()
 	skipShasums := false
 	imagePrefix, useStoredImagePrefix := additionalProperties[ImagePrefixKey]
 
-	if len(matches) == 1 {
-		// only use registry from operator image if it was not given yet
-		if registry == "" {
-			registry = matches[0][1]
-		}
-		if !useStoredImagePrefix {
-			imagePrefix = matches[0][2]
-		}
+	tagFromOperator := imageParser.GetTag()
+	if tagFromOperator == "" {
+		tagFromOperator = kubeVirtVersion
+	}
 
-		version := matches[0][3]
-		if version == "" {
-			tagFromOperator = "latest"
-		} else if strings.HasPrefix(version, ":") {
-			tagFromOperator = strings.TrimPrefix(version, ":")
-		} else {
-			// we have a shasum... chances are high that we get the shasums for the other images as well from env vars,
-			// but as a fallback use latest tag
-			tagFromOperator = "latest"
-			if kubeVirtVersion != "" {
-				tagFromOperator = kubeVirtVersion
-			}
-			operatorSha = strings.TrimPrefix(version, "@")
-		}
+	if tagFromOperator == "" {
+		tagFromOperator = "latest"
+	}
 
-		// only use tag from operator image if it was not given yet
-		// and if it was given, don't look for shasums
-		if tag == "" {
-			tag = tagFromOperator
-		} else {
-			skipShasums = true
-		}
+	if tag == "" {
+		tag = tagFromOperator
+	} else {
+		skipShasums = true
+	}
+
+	if registry == "" {
+		registry = imageParser.GetRegistry()
+	}
+
+	if !useStoredImagePrefix {
+		imagePrefix = imageParser.GetPrefix()
 	}
 
 	passthroughEnv := GetPassthroughEnv()
