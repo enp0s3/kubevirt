@@ -112,7 +112,7 @@ func PermanentHostDevicePlugins(maxDevices int, permissions string) []Device {
 
 	ret := make([]Device, 0, len(permanentDevicePluginPaths))
 	for name, path := range permanentDevicePluginPaths {
-		ret = append(ret, NewGenericDevicePlugin(name, path, maxDevices, permissions, (name != "kvm")))
+		ret = append(ret, NewGenericDevicePlugin(name, path, maxDevices, permissions, (name != "kvm" && name != "userfaultfd")))
 	}
 	return ret
 }
