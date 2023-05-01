@@ -66,6 +66,7 @@ const (
 	virtExporter     = "virt-exporter"
 )
 
+const UffdDevice = "devices.kubevirt.io/userfaultfd"
 const KvmDevice = "devices.kubevirt.io/kvm"
 const TunDevice = "devices.kubevirt.io/tun"
 const VhostNetDevice = "devices.kubevirt.io/vhost-net"

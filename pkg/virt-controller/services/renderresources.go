@@ -442,6 +442,9 @@ func calcVCPUs(cpu *v1.CPU) int64 {
 
 func getRequiredResources(vmi *v1.VirtualMachineInstance, allowEmulation bool) k8sv1.ResourceList {
 	res := k8sv1.ResourceList{}
+
+	res[UffdDevice] = resource.MustParse("1")
+
 	if util.NeedTunDevice(vmi) {
 		res[TunDevice] = resource.MustParse("1")
 	}
