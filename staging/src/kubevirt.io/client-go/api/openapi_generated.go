@@ -405,6 +405,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"kubevirt.io/api/core/v1.KubeVirtStatus":                                                     schema_kubevirtio_api_core_v1_KubeVirtStatus(ref),
 		"kubevirt.io/api/core/v1.KubeVirtWorkloadUpdateStrategy":                                     schema_kubevirtio_api_core_v1_KubeVirtWorkloadUpdateStrategy(ref),
 		"kubevirt.io/api/core/v1.LaunchSecurity":                                                     schema_kubevirtio_api_core_v1_LaunchSecurity(ref),
+		"kubevirt.io/api/core/v1.LiveUpdateCPU":                                                      schema_kubevirtio_api_core_v1_LiveUpdateCPU(ref),
+		"kubevirt.io/api/core/v1.LiveUpdateFeatures":                                                 schema_kubevirtio_api_core_v1_LiveUpdateFeatures(ref),
 		"kubevirt.io/api/core/v1.LogVerbosity":                                                       schema_kubevirtio_api_core_v1_LogVerbosity(ref),
 		"kubevirt.io/api/core/v1.LunTarget":                                                          schema_kubevirtio_api_core_v1_LunTarget(ref),
 		"kubevirt.io/api/core/v1.Machine":                                                            schema_kubevirtio_api_core_v1_Machine(ref),
@@ -19437,6 +19439,45 @@ func schema_kubevirtio_api_core_v1_LaunchSecurity(ref common.ReferenceCallback) 
 	}
 }
 
+func schema_kubevirtio_api_core_v1_LiveUpdateCPU(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"maxSockets": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The maximum amount of sockets that can be hot-plugged to the Virtual Machine",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_kubevirtio_api_core_v1_LiveUpdateFeatures(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cpu": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LiveUpdateCPU holds hotplug configuration for the CPU resource.",
+							Ref:         ref("kubevirt.io/api/core/v1.LiveUpdateCPU"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"kubevirt.io/api/core/v1.LiveUpdateCPU"},
+	}
+}
+
 func schema_kubevirtio_api_core_v1_LogVerbosity(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -23974,12 +24015,18 @@ func schema_kubevirtio_api_core_v1_VirtualMachineSpec(ref common.ReferenceCallba
 							},
 						},
 					},
+					"liveUpdateFeatures": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LiveUpdateFeatures references a configuration of hotpluggable resources",
+							Ref:         ref("kubevirt.io/api/core/v1.LiveUpdateFeatures"),
+						},
+					},
 				},
 				Required: []string{"template"},
 			},
 		},
 		Dependencies: []string{
-			"kubevirt.io/api/core/v1.DataVolumeTemplateSpec", "kubevirt.io/api/core/v1.InstancetypeMatcher", "kubevirt.io/api/core/v1.PreferenceMatcher", "kubevirt.io/api/core/v1.VirtualMachineInstanceTemplateSpec"},
+			"kubevirt.io/api/core/v1.DataVolumeTemplateSpec", "kubevirt.io/api/core/v1.InstancetypeMatcher", "kubevirt.io/api/core/v1.LiveUpdateFeatures", "kubevirt.io/api/core/v1.PreferenceMatcher", "kubevirt.io/api/core/v1.VirtualMachineInstanceTemplateSpec"},
 	}
 }
 

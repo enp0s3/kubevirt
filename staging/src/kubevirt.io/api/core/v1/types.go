@@ -1402,6 +1402,9 @@ type VirtualMachineSpec struct {
 	// dataVolumeTemplates is a list of dataVolumes that the VirtualMachineInstance template can reference.
 	// DataVolumes in this list are dynamically created for the VirtualMachine and are tied to the VirtualMachine's life-cycle.
 	DataVolumeTemplates []DataVolumeTemplateSpec `json:"dataVolumeTemplates,omitempty"`
+
+	// LiveUpdateFeatures references a configuration of hotpluggable resources
+	LiveUpdateFeatures *LiveUpdateFeatures `json:"liveUpdateFeatures,omitempty" optional:"true"`
 }
 
 // StateChangeRequestType represents the existing state change requests that are possible
@@ -2729,4 +2732,14 @@ func (p PreferenceMatcher) GetName() string {
 
 func (p PreferenceMatcher) GetRevisionName() string {
 	return p.RevisionName
+}
+
+type LiveUpdateFeatures struct {
+	// LiveUpdateCPU holds hotplug configuration for the CPU resource.
+	CPU *LiveUpdateCPU `json:"cpu,omitempty" optional:"true"`
+}
+
+type LiveUpdateCPU struct {
+	// The maximum amount of sockets that can be hot-plugged to the Virtual Machine
+	MaxSockets *uint32 `json:"maxSockets,omitempty" optional:"true"`
 }

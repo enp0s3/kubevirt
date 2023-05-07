@@ -17885,6 +17885,25 @@
      }
     }
    },
+   "v1.LiveUpdateCPU": {
+    "type": "object",
+    "properties": {
+     "maxSockets": {
+      "description": "The maximum amount of sockets that can be hot-plugged to the Virtual Machine",
+      "type": "integer",
+      "format": "int64"
+     }
+    }
+   },
+   "v1.LiveUpdateFeatures": {
+    "type": "object",
+    "properties": {
+     "cpu": {
+      "description": "LiveUpdateCPU holds hotplug configuration for the CPU resource.",
+      "$ref": "#/definitions/v1.LiveUpdateCPU"
+     }
+    }
+   },
    "v1.LogVerbosity": {
     "description": "LogVerbosity sets log verbosity level of  various components",
     "type": "object",
@@ -20333,6 +20352,10 @@
      "instancetype": {
       "description": "InstancetypeMatcher references a instancetype that is used to fill fields in Template",
       "$ref": "#/definitions/v1.InstancetypeMatcher"
+     },
+     "liveUpdateFeatures": {
+      "description": "LiveUpdateFeatures references a configuration of hotpluggable resources",
+      "$ref": "#/definitions/v1.LiveUpdateFeatures"
      },
      "preference": {
       "description": "PreferenceMatcher references a set of preference that is used to fill fields in Template",

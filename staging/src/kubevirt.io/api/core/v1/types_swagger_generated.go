@@ -331,6 +331,7 @@ func (VirtualMachineSpec) SwaggerDoc() map[string]string {
 		"preference":          "PreferenceMatcher references a set of preference that is used to fill fields in Template",
 		"template":            "Template is the direct specification of VirtualMachineInstance",
 		"dataVolumeTemplates": "dataVolumeTemplates is a list of dataVolumes that the VirtualMachineInstance template can reference.\nDataVolumes in this list are dynamically created for the VirtualMachine and are tied to the VirtualMachine's life-cycle.",
+		"liveUpdateFeatures":  "LiveUpdateFeatures references a configuration of hotpluggable resources",
 	}
 }
 
@@ -912,5 +913,17 @@ func (PreferenceMatcher) SwaggerDoc() map[string]string {
 		"kind":            "Kind specifies which preference resource is referenced.\nAllowed values are: \"VirtualMachinePreference\" and \"VirtualMachineClusterPreference\".\nIf not specified, \"VirtualMachineClusterPreference\" is used by default.\n\n+optional",
 		"revisionName":    "RevisionName specifies a ControllerRevision containing a specific copy of the\nVirtualMachinePreference or VirtualMachineClusterPreference to be used. This is\ninitially captured the first time the instancetype is applied to the VirtualMachineInstance.\n\n+optional",
 		"inferFromVolume": "InferFromVolume lists the name of a volume that should be used to infer or discover the preference\nto be used through known annotations on the underlying resource. Once applied to the PreferenceMatcher\nthis field is removed.\n\n+optional",
+	}
+}
+
+func (LiveUpdateFeatures) SwaggerDoc() map[string]string {
+	return map[string]string{
+		"cpu": "LiveUpdateCPU holds hotplug configuration for the CPU resource.",
+	}
+}
+
+func (LiveUpdateCPU) SwaggerDoc() map[string]string {
+	return map[string]string{
+		"maxSockets": "The maximum amount of sockets that can be hot-plugged to the Virtual Machine",
 	}
 }

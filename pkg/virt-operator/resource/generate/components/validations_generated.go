@@ -4237,6 +4237,20 @@ var CRDsValidation map[string]string = map[string]string{
                 is applied to the VirtualMachineInstance.
               type: string
           type: object
+        liveUpdateFeatures:
+          description: LiveUpdateFeatures references a configuration of hotpluggable
+            resources
+          properties:
+            cpu:
+              description: LiveUpdateCPU holds hotplug configuration for the CPU resource.
+              properties:
+                maxSockets:
+                  description: The maximum amount of sockets that can be hot-plugged
+                    to the Virtual Machine
+                  format: int32
+                  type: integer
+              type: object
+          type: object
         preference:
           description: PreferenceMatcher references a set of preference that is used
             to fill fields in Template
@@ -17450,6 +17464,21 @@ var CRDsValidation map[string]string = map[string]string{
                         instancetype is applied to the VirtualMachineInstance.
                       type: string
                   type: object
+                liveUpdateFeatures:
+                  description: LiveUpdateFeatures references a configuration of hotpluggable
+                    resources
+                  properties:
+                    cpu:
+                      description: LiveUpdateCPU holds hotplug configuration for the
+                        CPU resource.
+                      properties:
+                        maxSockets:
+                          description: The maximum amount of sockets that can be hot-plugged
+                            to the Virtual Machine
+                          format: int32
+                          type: integer
+                      type: object
+                  type: object
                 preference:
                   description: PreferenceMatcher references a set of preference that
                     is used to fill fields in Template
@@ -22360,6 +22389,21 @@ var CRDsValidation map[string]string = map[string]string{
                             is initially captured the first time the instancetype
                             is applied to the VirtualMachineInstance.
                           type: string
+                      type: object
+                    liveUpdateFeatures:
+                      description: LiveUpdateFeatures references a configuration of
+                        hotpluggable resources
+                      properties:
+                        cpu:
+                          description: LiveUpdateCPU holds hotplug configuration for
+                            the CPU resource.
+                          properties:
+                            maxSockets:
+                              description: The maximum amount of sockets that can
+                                be hot-plugged to the Virtual Machine
+                              format: int32
+                              type: integer
+                          type: object
                       type: object
                     preference:
                       description: PreferenceMatcher references a set of preference
