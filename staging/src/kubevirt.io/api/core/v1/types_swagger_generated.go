@@ -79,6 +79,7 @@ func (VirtualMachineInstanceStatus) SwaggerDoc() map[string]string {
 		"VSOCKCID":                      "VSOCKCID is used to track the allocated VSOCK CID in the VM.\n+optional",
 		"selinuxContext":                "SELinuxContext is the actual SELinux context of the virt-launcher pod\n+optional",
 		"machine":                       "Machine shows the final resulting qemu machine type. This can be different\nthan the machine type selected in the spec, due to qemus machine type alias mechanism.\n+optional",
+		"currentCPUTopology":            "CurrentCPUTopology specifies the current CPU topology used by the VM workload.\nCurrent topology may differ from the desired topology in the spec while CPU hotplug\ntakes place.",
 	}
 }
 
@@ -720,6 +721,7 @@ func (KubeVirtConfiguration) SwaggerDoc() map[string]string {
 		"vmStateStorageClass":                "VMStateStorageClass is the name of the storage class to use for the PVCs created to preserve VM state, like TPM.\nThe storage class must support RWX in filesystem mode.",
 		"ksmConfiguration":                   "KSMConfiguration holds the information regarding the enabling the KSM in the nodes (if available).",
 		"autoCPULimitNamespaceLabelSelector": "When set, AutoCPULimitNamespaceLabelSelector will set a CPU limit on virt-launcher for VMIs running inside\nnamespaces that match the label selector.\nThe CPU limit will equal the number of requested vCPUs.\nThis setting does not apply to VMIs with dedicated CPUs.",
+		"liveUpdateConfiguration":            "LiveUpdateConfiguration holds defaults for live update features",
 	}
 }
 
@@ -925,5 +927,11 @@ func (LiveUpdateFeatures) SwaggerDoc() map[string]string {
 func (LiveUpdateCPU) SwaggerDoc() map[string]string {
 	return map[string]string{
 		"maxSockets": "The maximum amount of sockets that can be hot-plugged to the Virtual Machine",
+	}
+}
+
+func (LiveUpdateConfiguration) SwaggerDoc() map[string]string {
+	return map[string]string{
+		"maxCpuSockets": "MaxCpuSockets holds the maximum amount of sockets that can be hotplugged",
 	}
 }

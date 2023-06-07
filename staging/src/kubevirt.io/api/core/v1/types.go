@@ -276,6 +276,10 @@ type VirtualMachineInstanceStatus struct {
 	// than the machine type selected in the spec, due to qemus machine type alias mechanism.
 	// +optional
 	Machine *Machine `json:"machine,omitempty"`
+	// CurrentCPUTopology specifies the current CPU topology used by the VM workload.
+	// Current topology may differ from the desired topology in the spec while CPU hotplug
+	// takes place.
+	CurrentCPUTopology *CPU `json:"currentCPUTopology,omitempty"`
 }
 
 // PersistentVolumeClaimInfo contains the relavant information virt-handler needs cached about a PVC
@@ -514,6 +518,9 @@ const (
 	// Reason means that VMI is not live migratable because it uses dedicated CPU and emulator thread isolation
 
 	VirtualMachineInstanceReasonDedicatedCPU = "DedicatedCPUNotLiveMigratable"
+
+	// Indicates that the VMI is in progress of Hot vCPU Plug/UnPlug
+	VirtualMachineInstanceVCPUChange = "HotVCPUChange"
 )
 
 const (
@@ -2355,6 +2362,8 @@ type KubeVirtConfiguration struct {
 	// The CPU limit will equal the number of requested vCPUs.
 	// This setting does not apply to VMIs with dedicated CPUs.
 	AutoCPULimitNamespaceLabelSelector *metav1.LabelSelector `json:"autoCPULimitNamespaceLabelSelector,omitempty"`
+	// LiveUpdateConfiguration holds defaults for live update features
+	LiveUpdateConfiguration *LiveUpdateConfiguration `json:"liveUpdateConfiguration,omitempty"`
 }
 
 type ArchConfiguration struct {
@@ -2742,4 +2751,9 @@ type LiveUpdateFeatures struct {
 type LiveUpdateCPU struct {
 	// The maximum amount of sockets that can be hot-plugged to the Virtual Machine
 	MaxSockets *uint32 `json:"maxSockets,omitempty" optional:"true"`
+}
+
+type LiveUpdateConfiguration struct {
+	// MaxCpuSockets holds the maximum amount of sockets that can be hotplugged
+	MaxCpuSockets uint32 `json:"maxCpuSockets,omitempty"`
 }
