@@ -48,6 +48,7 @@ import (
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
 	"kubevirt.io/kubevirt/pkg/instancetype"
+	"kubevirt.io/kubevirt/pkg/pointer"
 	"kubevirt.io/kubevirt/pkg/testutils"
 	"kubevirt.io/kubevirt/pkg/virt-api/webhooks"
 	virtconfig "kubevirt.io/kubevirt/pkg/virt-config"
@@ -1627,6 +1628,157 @@ var _ = Describe("Validating VM Admitter", func() {
 			// Ensure CPU has remained nil within the now admitted VMISpec
 			Expect(vm.Spec.Template.Spec.Domain.CPU).To(BeNil())
 
+		})
+	})
+
+	Context("Live update features", func() {
+		Context("CPU", func() {
+			var vm *v1.VirtualMachine
+			const maximumSockets uint32 = 24
+
+			BeforeEach(func() {
+				vmi := api.NewMinimalVMI("testvmi")
+				vm = &v1.VirtualMachine{
+					Spec: v1.VirtualMachineSpec{
+						LiveUpdateFeatures: &v1.LiveUpdateFeatures{
+							CPU: &v1.LiveUpdateCPU{
+								MaxSockets: pointer.P(maximumSockets),
+							},
+						},
+						Template: &v1.VirtualMachineInstanceTemplateSpec{
+							Spec: vmi.Spec,
+						},
+					},
+				}
+			})
+
+			It("should reject configuration of maxSockets in VM template", func() {
+				vm.Spec.Template.Spec.Domain.CPU = &v1.CPU{
+					MaxSockets: 1,
+				}
+
+				response := admitVm(vmsAdmitter, vm)
+				Expect(response.Allowed).To(BeFalse())
+			})
+
+			It("should reject VM creation when VM has instance type assigned", func() {
+				vm.Spec.Instancetype = &v1.InstancetypeMatcher{
+					Name: "foobar",
+				}
+				response := admitVm(vmsAdmitter, vm)
+				Expect(response.Allowed).To(BeFalse())
+			})
+
+			It("should reject VM creation when number of sockets exceeds the maximum configured", func() {
+				vm.Spec.Template.Spec.Domain.CPU = &v1.CPU{
+					Sockets: maximumSockets + 1,
+				}
+				response := admitVm(vmsAdmitter, vm)
+				Expect(response.Allowed).To(BeFalse())
+			})
+
+			It("should reject VM creation when resource requests are configured", func() {
+				vm.Spec.Template.Spec.Domain.Resources.Requests = make(k8sv1.ResourceList)
+				vm.Spec.Template.Spec.Domain.Resources.Requests[k8sv1.ResourceCPU] = resource.MustParse("400m")
+
+				response := admitVm(vmsAdmitter, vm)
+				Expect(response.Allowed).To(BeFalse())
+			})
+
+			It("should reject VM creation when resource limits are configured", func() {
+				vm.Spec.Template.Spec.Domain.Resources.Limits = make(k8sv1.ResourceList)
+				vm.Spec.Template.Spec.Domain.Resources.Limits[k8sv1.ResourceCPU] = resource.MustParse("400m")
+
+				response := admitVm(vmsAdmitter, vm)
+				Expect(response.Allowed).To(BeFalse())
+			})
+
+			When("VM is running", func() {
+				BeforeEach(func() {
+					vm.Status.Ready = true
+				})
+
+				It("should reject updating of VM live update features", func() {
+					oldVMBytes, err := json.Marshal(&vm)
+					Expect(err).ToNot(HaveOccurred())
+
+					vm.Spec.LiveUpdateFeatures.CPU = &v1.LiveUpdateCPU{}
+					newVMBytes, err := json.Marshal(&vm)
+					Expect(err).ToNot(HaveOccurred())
+
+					ar := &admissionv1.AdmissionReview{
+						Request: &admissionv1.AdmissionRequest{
+							Resource: webhooks.MigrationGroupVersionResource,
+							Object: runtime.RawExtension{
+								Raw: newVMBytes,
+							},
+							OldObject: runtime.RawExtension{
+								Raw: oldVMBytes,
+							},
+							Operation: admissionv1.Update,
+						},
+					}
+
+					response := vmsAdmitter.Admit(ar)
+					Expect(response.Allowed).To(BeFalse())
+				})
+
+				It("should reject updating CPU cores while CPU update feature is enabled ", func() {
+					vm.Spec.Template.Spec.Domain.CPU = &v1.CPU{
+						Cores: 8,
+					}
+					oldVMBytes, err := json.Marshal(&vm)
+					Expect(err).ToNot(HaveOccurred())
+
+					vm.Spec.Template.Spec.Domain.CPU.Cores = 16
+					newVMBytes, err := json.Marshal(&vm)
+					Expect(err).ToNot(HaveOccurred())
+
+					ar := &admissionv1.AdmissionReview{
+						Request: &admissionv1.AdmissionRequest{
+							Resource: webhooks.MigrationGroupVersionResource,
+							Object: runtime.RawExtension{
+								Raw: newVMBytes,
+							},
+							OldObject: runtime.RawExtension{
+								Raw: oldVMBytes,
+							},
+							Operation: admissionv1.Update,
+						},
+					}
+
+					response := vmsAdmitter.Admit(ar)
+					Expect(response.Allowed).To(BeFalse())
+				})
+
+				It("should reject updating CPU threads while CPU update feature is enabled", func() {
+					vm.Spec.Template.Spec.Domain.CPU = &v1.CPU{
+						Threads: 8,
+					}
+					oldVMBytes, err := json.Marshal(&vm)
+					Expect(err).ToNot(HaveOccurred())
+
+					vm.Spec.Template.Spec.Domain.CPU.Threads = 16
+					newVMBytes, err := json.Marshal(&vm)
+					Expect(err).ToNot(HaveOccurred())
+
+					ar := &admissionv1.AdmissionReview{
+						Request: &admissionv1.AdmissionRequest{
+							Resource: webhooks.MigrationGroupVersionResource,
+							Object: runtime.RawExtension{
+								Raw: newVMBytes,
+							},
+							OldObject: runtime.RawExtension{
+								Raw: oldVMBytes,
+							},
+							Operation: admissionv1.Update,
+						},
+					}
+
+					response := vmsAdmitter.Admit(ar)
+					Expect(response.Allowed).To(BeFalse())
+				})
+			})
 		})
 	})
 })

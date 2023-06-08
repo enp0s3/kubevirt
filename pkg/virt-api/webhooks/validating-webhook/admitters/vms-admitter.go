@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+
 	admissionv1 "k8s.io/api/admission/v1"
 	authv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -150,8 +152,23 @@ func (admitter *VMsAdmitter) Admit(ar *admissionv1.AdmissionReview) *admissionv1
 		return webhookutils.ToAdmissionResponse(causes)
 	}
 
+	if ar.Request.Operation == admissionv1.Update {
+		oldVM := v1.VirtualMachine{}
+		if err := json.Unmarshal(ar.Request.OldObject.Raw, &oldVM); err != nil {
+			return webhookutils.ToAdmissionResponseError(err)
+		}
+
+		if !equality.Semantic.DeepEqual(&oldVM.Spec, &vm.Spec) {
+			causes = validateVMUpdate(&oldVM, &vm)
+			if len(causes) > 0 {
+				return webhookutils.ToAdmissionResponse(causes)
+			}
+		}
+	}
+
 	reviewResponse := admissionv1.AdmissionResponse{}
 	reviewResponse.Allowed = true
+
 	return &reviewResponse
 }
 
@@ -362,6 +379,45 @@ func ValidateVirtualMachineSpec(field *k8sfield.Path, spec *v1.VirtualMachineSpe
 				Type:    metav1.CauseTypeFieldValueInvalid,
 				Message: fmt.Sprintf("Invalid RunStrategy (%s)", *spec.RunStrategy),
 				Field:   field.Child("runStrategy").String(),
+			})
+		}
+	}
+
+	// Validate live update features
+	if spec.Template.Spec.Domain.CPU != nil && spec.Template.Spec.Domain.CPU.MaxSockets != 0 {
+		causes = append(causes, metav1.StatusCause{
+			Type:    metav1.CauseTypeFieldValueNotSupported,
+			Message: fmt.Sprintf("CPU topology maxSockets cannot be set directy in VM template"),
+			Field:   field.Child("template.spec.domain.cpu.maxSockets").String(),
+		})
+	}
+
+	if spec.LiveUpdateFeatures != nil && spec.LiveUpdateFeatures.CPU != nil {
+		if spec.Instancetype != nil {
+			causes = append(causes, metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueNotSupported,
+				Message: fmt.Sprintf("Live update features cannot be used when instance type is configured"),
+				Field:   field.Child("liveUpdateFeatures").String(),
+			})
+		}
+
+		if spec.Template.Spec.Domain.CPU.Sockets != 0 {
+			if spec.LiveUpdateFeatures.CPU.MaxSockets != nil {
+				if spec.Template.Spec.Domain.CPU.Sockets > *spec.LiveUpdateFeatures.CPU.MaxSockets {
+					causes = append(causes, metav1.StatusCause{
+						Type:    metav1.CauseTypeFieldValueInvalid,
+						Message: fmt.Sprintf("Number of sockets in CPU topology is greater than the maximum sockets allowed"),
+						Field:   field.Child("liveUpdateFeatures").String(),
+					})
+				}
+			}
+		}
+
+		if hasCPURequestsOrLimits(&spec.Template.Spec.Domain.Resources) {
+			causes = append(causes, metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Message: fmt.Sprintf("Configuration of CPU resource requirements is not allowed when CPU live update is enabled"),
+				Field:   field.Child("liveUpdateFeatures").String(),
 			})
 		}
 	}
@@ -579,4 +635,50 @@ func validateSnapshotStatus(ar *admissionv1.AdmissionRequest, vm *v1.VirtualMach
 	}
 
 	return nil
+}
+
+func validateVMUpdate(oldVM, newVM *v1.VirtualMachine) []metav1.StatusCause {
+	if newVM.Status.Ready {
+		if !equality.Semantic.DeepEqual(&oldVM.Spec.LiveUpdateFeatures, &newVM.Spec.LiveUpdateFeatures) {
+			return []metav1.StatusCause{{
+				Type:    metav1.CauseTypeFieldValueNotSupported,
+				Message: fmt.Sprintf("Cannot update VM live features while VM is running"),
+				Field:   k8sfield.NewPath("spec").String(),
+			}}
+		}
+
+		if newVM.Spec.LiveUpdateFeatures != nil && newVM.Spec.LiveUpdateFeatures.CPU != nil {
+			oldTopology := oldVM.Spec.Template.Spec.Domain.CPU
+			newTopology := newVM.Spec.Template.Spec.Domain.CPU
+			if oldTopology != nil && newTopology != nil {
+				if oldTopology.Cores != newTopology.Cores {
+					return []metav1.StatusCause{{
+						Type:    metav1.CauseTypeFieldValueNotSupported,
+						Message: fmt.Sprintf("Cannot update CPU cores while live update features configured"),
+						Field:   k8sfield.NewPath("spec.template.spec.domain.cpu.cores").String(),
+					}}
+				}
+				if oldTopology.Threads != newTopology.Threads {
+					return []metav1.StatusCause{{
+						Type:    metav1.CauseTypeFieldValueNotSupported,
+						Message: fmt.Sprintf("Cannot update CPU threads while live update features configured"),
+						Field:   k8sfield.NewPath("spec.template.spec.domain.cpu.cores").String(),
+					}}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func hasCPURequestsOrLimits(rr *v1.ResourceRequirements) bool {
+	if _, ok := rr.Requests[corev1.ResourceCPU]; ok {
+		return true
+	}
+	if _, ok := rr.Limits[corev1.ResourceCPU]; ok {
+		return true
+	}
+
+	return false
 }
