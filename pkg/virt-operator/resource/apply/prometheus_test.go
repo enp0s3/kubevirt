@@ -34,8 +34,6 @@ var _ = Describe("Apply Prometheus", func() {
 	var kv *v1.KubeVirt
 	var stores util.Stores
 
-	config := getConfig("fake-registry", "v9.9.9")
-
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		kvInterface := kubecli.NewMockKubeVirtInterface(ctrl)
