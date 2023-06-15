@@ -70,7 +70,7 @@ func NewServiceMonitorCR(namespace string, monitorNamespace string, insecureSkip
 }
 
 // NewPrometheusRuleCR returns a PrometheusRule with a group of alerts for the KubeVirt deployment.
-func NewPrometheusRuleCR(namespace string, workloadUpdatesEnabled bool) *v1.PrometheusRule {
+func NewPrometheusRuleCR(namespace string) *v1.PrometheusRule {
 	return &v1.PrometheusRule{
 		TypeMeta: v12.TypeMeta{
 			APIVersion: v12.SchemeGroupVersion.String(),
@@ -84,12 +84,12 @@ func NewPrometheusRuleCR(namespace string, workloadUpdatesEnabled bool) *v1.Prom
 				"k8s-app":          "kubevirt",
 			},
 		},
-		Spec: *NewPrometheusRuleSpec(namespace, workloadUpdatesEnabled),
+		Spec: *NewPrometheusRuleSpec(namespace),
 	}
 }
 
 // NewPrometheusRuleSpec makes a prometheus rule spec for kubevirt
-func NewPrometheusRuleSpec(ns string, workloadUpdatesEnabled bool) *v1.PrometheusRuleSpec {
+func NewPrometheusRuleSpec(ns string) *v1.PrometheusRuleSpec {
 	getRestCallsFailedWarning := func(failingCallsPercentage int, component, duration string) string {
 		const restCallsFailWarningTemplate = "More than %d%% of the rest calls failed in %s for the last %s"
 		return fmt.Sprintf(restCallsFailWarningTemplate, failingCallsPercentage, component, duration)
@@ -506,23 +506,6 @@ func NewPrometheusRuleSpec(ns string, workloadUpdatesEnabled bool) *v1.Prometheu
 		},
 	}
 
-	//if workloadUpdatesEnabled {
-	//	ruleSpec.Groups[0].Rules = append(ruleSpec.Groups[0].Rules, v1.Rule{
-	//
-	//		Alert: "OutdatedVirtualMachineInstanceWorkloads",
-	//		Expr:  intstr.FromString("kubevirt_vmi_outdated_count != 0"),
-	//		For:   "1440m",
-	//		Annotations: map[string]string{
-	//			"summary":     "Some running VMIs are still active in outdated pods after KubeVirt control plane update has completed.",
-	//			"runbook_url": fmt.Sprintf(runbookURLTemplate, "OutdatedVirtualMachineInstanceWorkloads"),
-	//		},
-	//		Labels: map[string]string{
-	//			severityAlertLabelKey:        "warning",
-	//			operatorHealthImpactLabelKey: "none",
-	//		},
-	//	})
-	//}
-
 	for _, group := range ruleSpec.Groups {
 		for _, rule := range group.Rules {
 			if rule.Alert == "" {
@@ -709,7 +692,6 @@ func getRunbookURLTemplate() string {
 }
 
 func UpdateWorkloadUpdaterPromRule(kv *virtv1.KubeVirt, ruleSpec *v1.PrometheusRuleSpec) {
-
 	workloadUpdateRule := v1.Rule{
 
 		Alert: "OutdatedVirtualMachineInstanceWorkloads",
@@ -733,7 +715,7 @@ func UpdateWorkloadUpdaterPromRule(kv *virtv1.KubeVirt, ruleSpec *v1.PrometheusR
 		}
 	} else {
 		if exists {
-			ruleSpec.Groups[0].Rules = RemoveIndex(ruleSpec.Groups[0].Rules, index)
+			ruleSpec.Groups[0].Rules = removePromRuleByIndex(ruleSpec.Groups[0].Rules, index)
 		}
 	}
 }
@@ -743,13 +725,14 @@ func findPromRule(ruleName string, rules []v1.Rule) (idx int, found bool) {
 		if rule.Alert == ruleName {
 			found = true
 			idx = index
+			break
 		}
 	}
 
 	return
 }
 
-func RemoveIndex(s []v1.Rule, index int) []v1.Rule {
+func removePromRuleByIndex(s []v1.Rule, index int) []v1.Rule {
 	if index < 0 || index > len(s)-1 {
 		return s
 	}

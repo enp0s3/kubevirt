@@ -132,7 +132,7 @@ var _ = Describe("Apply Prometheus", func() {
 
 	It("should not patch PrometheusRules on sync when they are equal", func() {
 
-		pr := components.NewPrometheusRuleCR("namespace", config.WorkloadUpdatesEnabled())
+		pr := components.NewPrometheusRuleCR("namespace")
 
 		version, imageRegistry, id := getTargetVersionRegistryID(kv)
 		injectOperatorMetadata(kv, &pr.ObjectMeta, version, imageRegistry, id, true)
@@ -151,7 +151,7 @@ var _ = Describe("Apply Prometheus", func() {
 
 	It("should patch PrometheusRules on sync when they are equal", func() {
 
-		pr := components.NewPrometheusRuleCR("namespace", config.WorkloadUpdatesEnabled())
+		pr := components.NewPrometheusRuleCR("namespace")
 
 		version, imageRegistry, id := getTargetVersionRegistryID(kv)
 		injectOperatorMetadata(kv, &pr.ObjectMeta, version, imageRegistry, id, true)

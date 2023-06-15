@@ -121,9 +121,7 @@ func (r *Reconciler) createOrUpdatePrometheusRule(prometheusRule *promv1.Prometh
 
 	injectOperatorMetadata(r.kv, &prometheusRule.ObjectMeta, version, imageRegistry, id, true)
 
-	if len(r.kv.Spec.WorkloadUpdateStrategy.WorkloadUpdateMethods) > 0 {
-		components.UpdateWorkloadUpdaterPromRule(r.kv, &prometheusRule.Spec)
-	}
+	components.UpdateWorkloadUpdaterPromRule(r.kv, &prometheusRule.Spec)
 
 	if !exists {
 		// Create non existent
