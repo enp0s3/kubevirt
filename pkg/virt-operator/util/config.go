@@ -205,9 +205,9 @@ func GetTargetConfigFromKV(kv *v1.KubeVirt) *KubeVirtDeploymentConfig {
 
 func GetTargetConfigFromKVWithEnvVarManager(kv *v1.KubeVirt, envVarManager EnvVarManager) *KubeVirtDeploymentConfig {
 	additionalProperties := getKVMapFromSpec(kv.Spec)
-	if len(kv.Spec.WorkloadUpdateStrategy.WorkloadUpdateMethods) > 0 {
-		additionalProperties[AdditionalPropertiesWorkloadUpdatesEnabled] = ""
-	}
+	//if len(kv.Spec.WorkloadUpdateStrategy.WorkloadUpdateMethods) > 0 {
+	//	additionalProperties[AdditionalPropertiesWorkloadUpdatesEnabled] = ""
+	//}
 	if kv.Spec.Configuration.MigrationConfiguration != nil &&
 		kv.Spec.Configuration.MigrationConfiguration.Network != nil {
 		additionalProperties[AdditionalPropertiesMigrationNetwork] = *kv.Spec.Configuration.MigrationConfiguration.Network

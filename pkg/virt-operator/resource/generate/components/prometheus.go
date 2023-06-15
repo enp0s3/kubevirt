@@ -506,22 +506,22 @@ func NewPrometheusRuleSpec(ns string, workloadUpdatesEnabled bool) *v1.Prometheu
 		},
 	}
 
-	if workloadUpdatesEnabled {
-		ruleSpec.Groups[0].Rules = append(ruleSpec.Groups[0].Rules, v1.Rule{
-
-			Alert: "OutdatedVirtualMachineInstanceWorkloads",
-			Expr:  intstr.FromString("kubevirt_vmi_outdated_count != 0"),
-			For:   "1440m",
-			Annotations: map[string]string{
-				"summary":     "Some running VMIs are still active in outdated pods after KubeVirt control plane update has completed.",
-				"runbook_url": fmt.Sprintf(runbookURLTemplate, "OutdatedVirtualMachineInstanceWorkloads"),
-			},
-			Labels: map[string]string{
-				severityAlertLabelKey:        "warning",
-				operatorHealthImpactLabelKey: "none",
-			},
-		})
-	}
+	//if workloadUpdatesEnabled {
+	//	ruleSpec.Groups[0].Rules = append(ruleSpec.Groups[0].Rules, v1.Rule{
+	//
+	//		Alert: "OutdatedVirtualMachineInstanceWorkloads",
+	//		Expr:  intstr.FromString("kubevirt_vmi_outdated_count != 0"),
+	//		For:   "1440m",
+	//		Annotations: map[string]string{
+	//			"summary":     "Some running VMIs are still active in outdated pods after KubeVirt control plane update has completed.",
+	//			"runbook_url": fmt.Sprintf(runbookURLTemplate, "OutdatedVirtualMachineInstanceWorkloads"),
+	//		},
+	//		Labels: map[string]string{
+	//			severityAlertLabelKey:        "warning",
+	//			operatorHealthImpactLabelKey: "none",
+	//		},
+	//	})
+	//}
 
 	for _, group := range ruleSpec.Groups {
 		for _, rule := range group.Rules {
