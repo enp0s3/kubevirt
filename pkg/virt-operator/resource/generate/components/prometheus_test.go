@@ -35,7 +35,7 @@ var _ = Describe("Prometheus", func() {
 		desiredRunbookURLTemplate := "desired/runbookURL/template/%s"
 		os.Setenv(runbookURLTemplateEnv, desiredRunbookURLTemplate)
 
-		promRule := NewPrometheusRuleCR("mynamespace", true)
+		promRule := NewPrometheusRuleCR("mynamespace")
 
 		for _, group := range promRule.Spec.Groups {
 			for _, rule := range group.Rules {
