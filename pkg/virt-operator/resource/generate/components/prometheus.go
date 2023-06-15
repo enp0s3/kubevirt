@@ -3,6 +3,7 @@ package components
 import (
 	"errors"
 	"fmt"
+	virtv1 "kubevirt.io/api/core/v1"
 	"os"
 	"strings"
 
@@ -705,4 +706,61 @@ func getRunbookURLTemplate() string {
 	}
 
 	return runbookURLTemplate
+}
+
+func UpdateWorkloadUpdaterPromRule(kv *virtv1.KubeVirt, ruleSpec *v1.PrometheusRuleSpec) {
+
+	workloadUpdateRule := v1.Rule{
+
+		Alert: "OutdatedVirtualMachineInstanceWorkloads",
+		Expr:  intstr.FromString("kubevirt_vmi_outdated_count != 0"),
+		For:   "1440m",
+		Annotations: map[string]string{
+			"summary":     "Some running VMIs are still active in outdated pods after KubeVirt control plane update has completed.",
+			"runbook_url": fmt.Sprintf(getRunbookURLTemplate(), "OutdatedVirtualMachineInstanceWorkloads"),
+		},
+		Labels: map[string]string{
+			severityAlertLabelKey:        "warning",
+			operatorHealthImpactLabelKey: "none",
+		},
+	}
+
+	index, exists := findPromRule("OutdatedVirtualMachineInstanceWorkloads", ruleSpec.Groups[0].Rules)
+
+	if len(kv.Spec.WorkloadUpdateStrategy.WorkloadUpdateMethods) > 0 {
+		if !exists {
+			ruleSpec.Groups[0].Rules = append(ruleSpec.Groups[0].Rules, workloadUpdateRule)
+		}
+	} else {
+		if exists {
+			ruleSpec.Groups[0].Rules = RemoveIndex(ruleSpec.Groups[0].Rules, index)
+		}
+	}
+}
+
+func findPromRule(ruleName string, rules []v1.Rule) (idx int, found bool) {
+	for index, rule := range rules {
+		if rule.Alert == ruleName {
+			found = true
+			idx = index
+		}
+	}
+
+	return
+}
+
+func RemoveIndex(s []v1.Rule, index int) []v1.Rule {
+	if index < 0 || index > len(s)-1 {
+		return s
+	}
+
+	if index == 0 {
+		return s[1:]
+	}
+
+	if index == len(s)-1 {
+		return s[:len(s)-1]
+	}
+
+	return append(s[:index], s[index+1:]...)
 }

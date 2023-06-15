@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"kubevirt.io/kubevirt/pkg/virt-operator/resource/generate/components"
+
 	promv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/imdario/mergo"
 	"github.com/openshift/library-go/pkg/operator/resource/resourcemerge"
@@ -118,6 +120,11 @@ func (r *Reconciler) createOrUpdatePrometheusRule(prometheusRule *promv1.Prometh
 	obj, exists, _ := r.stores.PrometheusRuleCache.Get(prometheusRule)
 
 	injectOperatorMetadata(r.kv, &prometheusRule.ObjectMeta, version, imageRegistry, id, true)
+
+	if len(r.kv.Spec.WorkloadUpdateStrategy.WorkloadUpdateMethods) > 0 {
+		components.UpdateWorkloadUpdaterPromRule(r.kv, &prometheusRule.Spec)
+	}
+
 	if !exists {
 		// Create non existent
 		r.expectations.PrometheusRule.RaiseExpectations(r.kvKey, 1, 0)
