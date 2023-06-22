@@ -1,4 +1,9 @@
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load(
+    "@io_bazel_rules_docker//container:container.bzl",
+    "container_image",
+    "container_push",
+)
+
 load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
 
 pkg_tar(
@@ -22,6 +27,16 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
+container_push(
+    name = "push-alpine-container-disk-image",
+    format = "Docker",
+    image = "//:alpine-container-disk-image",
+    registry = "$(container_prefix)",
+    repository = "$(image_prefix)virt-operator",
+    tag = "$(container_tag)",
+)
+
+
 pkg_tar(
     name = "cirros-image-tar",
     srcs = select({
@@ -41,6 +56,15 @@ container_image(
     }),
     tars = [":cirros-image-tar"],
     visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "push-cirros-container-disk-image",
+    format = "Docker",
+    image = "//:cirros-container-disk-image",
+    registry = "$(container_prefix)",
+    repository = "$(image_prefix)virt-operator",
+    tag = "$(container_tag)",
 )
 
 pkg_tar(
@@ -65,6 +89,15 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
+container_push(
+    name = "push-cirros-custom-container-disk-image",
+    format = "Docker",
+    image = "//:cirros-custom-container-disk-image",
+    registry = "$(container_prefix)",
+    repository = "$(image_prefix)virt-operator",
+    tag = "$(container_tag)",
+)
+
 pkg_tar(
     name = "virtio-image-tar",
     srcs = ["@virtio_win_image//file"],
@@ -83,6 +116,15 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
+container_push(
+    name = "push-virtio-container-disk-image",
+    format = "Docker",
+    image = "//:virtio-container-disk-image",
+    registry = "$(container_prefix)",
+    repository = "$(image_prefix)virt-operator",
+    tag = "$(container_tag)",
+)
+
 container_image(
     name = "fedora-with-test-tooling",
     architecture = select({
@@ -97,6 +139,15 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
+container_push(
+    name = "push-fedora-with-test-tooling",
+    format = "Docker",
+    image = "//:fedora-with-test-tooling",
+    registry = "$(container_prefix)",
+    repository = "$(image_prefix)virt-operator",
+    tag = "$(container_tag)",
+)
+
 container_image(
     name = "alpine-with-test-tooling",
     architecture = select({
@@ -106,6 +157,15 @@ container_image(
     base = "@alpine_with_test_tooling//image",
     mode = "444",
     visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "push-alpine-with-test-tooling",
+    format = "Docker",
+    image = "//:alpine-with-test-tooling",
+    registry = "$(container_prefix)",
+    repository = "$(image_prefix)virt-operator",
+    tag = "$(container_tag)",
 )
 
 container_image(
@@ -120,6 +180,15 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
+container_push(
+    name = "push-alpine-ext-kernel-boot-demo-container",
+    format = "Docker",
+    image = "//:alpine-ext-kernel-boot-demo-container",
+    registry = "$(container_prefix)",
+    repository = "$(image_prefix)virt-operator",
+    tag = "$(container_tag)",
+)
+
 container_image(
     name = "fedora-realtime",
     architecture = select({
@@ -129,4 +198,13 @@ container_image(
     base = "@fedora_realtime//image",
     mode = "444",
     visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "push-fedora-realtime",
+    format = "Docker",
+    image = "//:fedora-realtime",
+    registry = "$(container_prefix)",
+    repository = "$(image_prefix)virt-operator",
+    tag = "$(container_tag)",
 )

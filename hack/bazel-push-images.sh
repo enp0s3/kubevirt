@@ -23,7 +23,14 @@ source hack/common.sh
 source hack/bootstrap.sh
 source hack/config.sh
 
-PUSH_TARGETS=(${PUSH_TARGETS:-other-images virt-operator virt-api virt-controller virt-handler virt-launcher virt-exportserver virt-exportproxy conformance libguestfs-tools pr-helper})
+PUSH_OTHER_IMAGES=${PUSH_OTHER_IMAGES:-true}
+
+if [ ! -z "$PUSH_TARGETS" ]; then
+  PUSH_OTHER_IMAGES=false
+fi
+
+#-other-images
+PUSH_TARGETS=(${PUSH_TARGETS:-virt-operator virt-api virt-controller virt-handler virt-launcher virt-exportserver virt-exportproxy conformance libguestfs-tools pr-helper})
 
 function push_target() {
     local path=$1
@@ -47,10 +54,18 @@ function push_target() {
     fi
 }
 
+if [ "${PUSH_OTHER_IMAGES}" == "true" ]; then
+  for target in "alpine-container-disk-image cirros-container-disk-image cirros-custom-container-disk-image virtio-container-disk-image fedora-with-test-tooling alpine-with-test-tooling alpine-ext-kernel-boot-demo-container" ; do
+    push_target "containerimages" $target
+  done
+fi
+
 for target in ${PUSH_TARGETS[@]}; do
   push_target "" $target
 done
 
+
+# alpine-container-disk-image cirros-container-disk-image cirros-custom-container-disk-image virtio-container-disk-image fedora-with-test-tooling alpine-with-test-tooling alpine-ext-kernel-boot-demo-container
 rm -rf ${DIGESTS_DIR}/${ARCHITECTURE}
 mkdir -p ${DIGESTS_DIR}/${ARCHITECTURE}
 
