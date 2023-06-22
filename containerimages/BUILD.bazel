@@ -30,7 +30,7 @@ container_image(
 container_push(
     name = "push-alpine-container-disk-image",
     format = "Docker",
-    image = "//:alpine-container-disk-image",
+    image = ":alpine-container-disk-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)virt-operator",
     tag = "$(container_tag)",
@@ -61,7 +61,7 @@ container_image(
 container_push(
     name = "push-cirros-container-disk-image",
     format = "Docker",
-    image = "//:cirros-container-disk-image",
+    image = ":cirros-container-disk-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)virt-operator",
     tag = "$(container_tag)",
@@ -92,7 +92,7 @@ container_image(
 container_push(
     name = "push-cirros-custom-container-disk-image",
     format = "Docker",
-    image = "//:cirros-custom-container-disk-image",
+    image = ":cirros-custom-container-disk-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)virt-operator",
     tag = "$(container_tag)",
@@ -119,7 +119,7 @@ container_image(
 container_push(
     name = "push-virtio-container-disk-image",
     format = "Docker",
-    image = "//:virtio-container-disk-image",
+    image = ":virtio-container-disk-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)virt-operator",
     tag = "$(container_tag)",
@@ -142,7 +142,7 @@ container_image(
 container_push(
     name = "push-fedora-with-test-tooling",
     format = "Docker",
-    image = "//:fedora-with-test-tooling",
+    image = ":fedora-with-test-tooling",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)virt-operator",
     tag = "$(container_tag)",
@@ -162,7 +162,7 @@ container_image(
 container_push(
     name = "push-alpine-with-test-tooling",
     format = "Docker",
-    image = "//:alpine-with-test-tooling",
+    image = ":alpine-with-test-tooling",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)virt-operator",
     tag = "$(container_tag)",
@@ -183,7 +183,7 @@ container_image(
 container_push(
     name = "push-alpine-ext-kernel-boot-demo-container",
     format = "Docker",
-    image = "//:alpine-ext-kernel-boot-demo-container",
+    image = ":alpine-ext-kernel-boot-demo-container",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)virt-operator",
     tag = "$(container_tag)",
@@ -203,7 +203,7 @@ container_image(
 container_push(
     name = "push-fedora-realtime",
     format = "Docker",
-    image = "//:fedora-realtime",
+    image = ":fedora-realtime",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)virt-operator",
     tag = "$(container_tag)",
