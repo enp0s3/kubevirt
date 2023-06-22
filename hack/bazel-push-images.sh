@@ -55,14 +55,14 @@ function push_target() {
 
 if [ "${PUSH_OTHER_IMAGES}" == "true" ]; then
   container_disk_images=(\
-    alpine-container-disk-image \
-    cirros-container-disk-image \
-    cirros-custom-container-disk-image \
-    virtio-container-disk-image \
-    fedora-with-test-tooling \
-    alpine-with-test-tooling \
-    alpine-ext-kernel-boot-demo-container \
-    fedora-realtime \
+    alpine-container-disk-demo \
+    cirros-container-disk-demo \
+    cirros-custom-container-disk-demo \
+    virtio-container-disk \
+    fedora-with-test-tooling-container-disk \
+    alpine-with-test-tooling-container-disk \
+    alpine-ext-kernel-boot-demo \
+    fedora-realtime-container-disk \
   )
 
   for target in ${container_disk_images[@]} ; do
@@ -70,9 +70,9 @@ if [ "${PUSH_OTHER_IMAGES}" == "true" ]; then
   done
 
  cmd_images=(\
-  example-hook-sidecar-image \
-  example-disk-mutation-hook-sidecar-image \
-  example-cloudinit-hook-sidecar-image \
+  example-hook-sidecar \
+  example-disk-mutation-hook-sidecar \
+  example-cloudinit-hook-sidecar \
  )
 
   for target in ${cmd_images[@]} ; do
@@ -80,10 +80,10 @@ if [ "${PUSH_OTHER_IMAGES}" == "true" ]; then
   done
 
   test_images=(\
-    disks-images-provider-image \
-    nfs-server-image \
-    vm-killer-image \
-    winrmcli-image \
+    disks-images-provider \
+    nfs-server \
+    vm-killer \
+    winrmcli \
   )
 
   for target in ${test_images[@]} ; do

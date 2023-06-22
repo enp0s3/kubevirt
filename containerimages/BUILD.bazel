@@ -18,7 +18,7 @@ pkg_tar(
 )
 
 container_image(
-    name = "alpine-container-disk-image",
+    name = "alpine-container-disk-demo-image",
     architecture = select({
         "@io_bazel_rules_go//go/platform:linux_arm64": "arm64",
         "//conditions:default": "amd64",
@@ -28,9 +28,9 @@ container_image(
 )
 
 container_push(
-    name = "push-alpine-container-disk-image",
+    name = "push-alpine-container-disk-demo",
     format = "Docker",
-    image = ":alpine-container-disk-image",
+    image = ":alpine-container-disk-demo-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)alpine-container-disk-demo",
     tag = "$(container_tag)",
@@ -49,7 +49,7 @@ pkg_tar(
 )
 
 container_image(
-    name = "cirros-container-disk-image",
+    name = "cirros-container-disk-demo-image",
     architecture = select({
         "@io_bazel_rules_go//go/platform:linux_arm64": "arm64",
         "//conditions:default": "amd64",
@@ -59,9 +59,9 @@ container_image(
 )
 
 container_push(
-    name = "push-cirros-container-disk-image",
+    name = "push-cirros-container-disk-demo",
     format = "Docker",
-    image = ":cirros-container-disk-image",
+    image = ":cirros-container-disk-demo-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)cirros-container-disk-demo",
     tag = "$(container_tag)",
@@ -80,7 +80,7 @@ pkg_tar(
 
 # used for e2e testing of custom base baths
 container_image(
-    name = "cirros-custom-container-disk-image",
+    name = "cirros-custom-container-disk-demo-image",
     architecture = select({
         "@io_bazel_rules_go//go/platform:linux_arm64": "arm64",
         "//conditions:default": "amd64",
@@ -90,9 +90,9 @@ container_image(
 )
 
 container_push(
-    name = "push-cirros-custom-container-disk-image",
+    name = "push-cirros-custom-container-disk-demo",
     format = "Docker",
-    image = ":cirros-custom-container-disk-image",
+    image = ":cirros-custom-container-disk-demo-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)cirros-custom-container-disk-demo",
     tag = "$(container_tag)",
@@ -117,7 +117,7 @@ container_image(
 )
 
 container_push(
-    name = "push-virtio-container-disk-image",
+    name = "push-virtio-container-disk",
     format = "Docker",
     image = ":virtio-container-disk-image",
     registry = "$(container_prefix)",
@@ -126,7 +126,7 @@ container_push(
 )
 
 container_image(
-    name = "fedora-with-test-tooling",
+    name = "fedora-with-test-tooling-container-disk-image",
     architecture = select({
         "@io_bazel_rules_go//go/platform:linux_arm64": "arm64",
         "//conditions:default": "amd64",
@@ -140,16 +140,16 @@ container_image(
 )
 
 container_push(
-    name = "push-fedora-with-test-tooling",
+    name = "push-fedora-with-test-tooling-container-disk",
     format = "Docker",
-    image = ":fedora-with-test-tooling",
+    image = ":fedora-with-test-tooling-container-disk-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)fedora-with-test-tooling-container-disk",
     tag = "$(container_tag)",
 )
 
 container_image(
-    name = "alpine-with-test-tooling",
+    name = "alpine-with-test-tooling-container-disk-image",
     architecture = select({
         "@io_bazel_rules_go//go/platform:linux_arm64": "arm64",
         "//conditions:default": "amd64",
@@ -160,16 +160,16 @@ container_image(
 )
 
 container_push(
-    name = "push-alpine-with-test-tooling",
+    name = "push-alpine-with-test-tooling-container-disk",
     format = "Docker",
-    image = ":alpine-with-test-tooling",
+    image = ":alpine-with-test-tooling-container-disk-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)alpine-with-test-tooling-container-disk",
     tag = "$(container_tag)",
 )
 
 container_image(
-    name = "alpine-ext-kernel-boot-demo-container",
+    name = "alpine-ext-kernel-boot-demo-image",
     architecture = select({
         "@io_bazel_rules_go//go/platform:linux_arm64": "arm64",
         "//conditions:default": "amd64",
@@ -181,7 +181,7 @@ container_image(
 )
 
 container_push(
-    name = "push-alpine-ext-kernel-boot-demo-container",
+    name = "push-alpine-ext-kernel-boot-demo",
     format = "Docker",
     image = ":alpine-ext-kernel-boot-demo-container",
     registry = "$(container_prefix)",
@@ -190,7 +190,7 @@ container_push(
 )
 
 container_image(
-    name = "fedora-realtime",
+    name = "fedora-realtime-container-disk-image",
     architecture = select({
         "@io_bazel_rules_go//go/platform:linux_arm64": "arm64",
         "//conditions:default": "amd64",
@@ -201,9 +201,9 @@ container_image(
 )
 
 container_push(
-    name = "push-fedora-realtime",
+    name = "push-fedora-realtime-container-disk",
     format = "Docker",
-    image = ":fedora-realtime",
+    image = ":fedora-realtime-container-disk-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)fedora-realtime-container-disk",
     tag = "$(container_tag)",
