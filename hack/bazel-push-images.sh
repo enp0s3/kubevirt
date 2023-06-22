@@ -29,7 +29,6 @@ if [ ! -z "$PUSH_TARGETS" ]; then
   PUSH_OTHER_IMAGES=false
 fi
 
-#-other-images
 PUSH_TARGETS=(${PUSH_TARGETS:-virt-operator virt-api virt-controller virt-handler virt-launcher virt-exportserver virt-exportproxy conformance libguestfs-tools pr-helper})
 
 function push_target() {
@@ -56,17 +55,21 @@ function push_target() {
 
 if [ "${PUSH_OTHER_IMAGES}" == "true" ]; then
   container_disk_images=(
-  alpine-container-disk-image \
-  cirros-container-disk-image \
-  cirros-custom-container-disk-image \
-  virtio-container-disk-image \
-  fedora-with-test-tooling \
-  alpine-with-test-tooling \
-  alpine-ext-kernel-boot-demo-container \
+    alpine-container-disk-image \
+    cirros-container-disk-image \
+    cirros-custom-container-disk-image \
+    virtio-container-disk-image \
+    fedora-with-test-tooling \
+    alpine-with-test-tooling \
+    alpine-ext-kernel-boot-demo-container \
+    fedora-realtime \
   )
+
+
   for target in ${container_disk_images[@]} ; do
     push_target "containerimages" $target
   done
+
 fi
 
 for target in ${PUSH_TARGETS[@]}; do

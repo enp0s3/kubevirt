@@ -32,7 +32,7 @@ container_push(
     format = "Docker",
     image = ":alpine-container-disk-image",
     registry = "$(container_prefix)",
-    repository = "$(image_prefix)virt-operator",
+    repository = "$(image_prefix)alpine-container-disk-demo",
     tag = "$(container_tag)",
 )
 
@@ -63,7 +63,7 @@ container_push(
     format = "Docker",
     image = ":cirros-container-disk-image",
     registry = "$(container_prefix)",
-    repository = "$(image_prefix)virt-operator",
+    repository = "$(image_prefix)cirros-container-disk-demo",
     tag = "$(container_tag)",
 )
 
@@ -94,7 +94,7 @@ container_push(
     format = "Docker",
     image = ":cirros-custom-container-disk-image",
     registry = "$(container_prefix)",
-    repository = "$(image_prefix)virt-operator",
+    repository = "$(image_prefix)cirros-custom-container-disk-demo",
     tag = "$(container_tag)",
 )
 
@@ -121,7 +121,7 @@ container_push(
     format = "Docker",
     image = ":virtio-container-disk-image",
     registry = "$(container_prefix)",
-    repository = "$(image_prefix)virt-operator",
+    repository = "$(image_prefix)virtio-container-disk",
     tag = "$(container_tag)",
 )
 
@@ -144,7 +144,7 @@ container_push(
     format = "Docker",
     image = ":fedora-with-test-tooling",
     registry = "$(container_prefix)",
-    repository = "$(image_prefix)virt-operator",
+    repository = "$(image_prefix)fedora-with-test-tooling-container-disk",
     tag = "$(container_tag)",
 )
 
@@ -164,7 +164,7 @@ container_push(
     format = "Docker",
     image = ":alpine-with-test-tooling",
     registry = "$(container_prefix)",
-    repository = "$(image_prefix)virt-operator",
+    repository = "$(image_prefix)alpine-with-test-tooling-container-disk",
     tag = "$(container_tag)",
 )
 
@@ -185,7 +185,7 @@ container_push(
     format = "Docker",
     image = ":alpine-ext-kernel-boot-demo-container",
     registry = "$(container_prefix)",
-    repository = "$(image_prefix)virt-operator",
+    repository = "$(image_prefix)alpine-ext-kernel-boot-demo",
     tag = "$(container_tag)",
 )
 
@@ -205,6 +205,6 @@ container_push(
     format = "Docker",
     image = ":fedora-realtime",
     registry = "$(container_prefix)",
-    repository = "$(image_prefix)virt-operator",
+    repository = "$(image_prefix)fedora-realtime-container-disk",
     tag = "$(container_tag)",
 )
