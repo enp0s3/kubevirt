@@ -25,32 +25,31 @@ source hack/config.sh
 
 PUSH_TARGETS=(${PUSH_TARGETS:-other-images virt-operator virt-api virt-controller virt-handler virt-launcher virt-exportserver virt-exportproxy conformance libguestfs-tools pr-helper})
 
-for tag in ${docker_tag} ${docker_tag_alt}; do
-    for target in ${PUSH_TARGETS[@]}; do
+function push_target() {
+    local path=$1
+    local target=$2
 
+    for tag in ${docker_tag} ${docker_tag_alt}; do
         bazel run \
             --config=${ARCHITECTURE} \
             --define container_prefix=${docker_prefix} \
             --define image_prefix=${image_prefix} \
             --define container_tag=${tag} \
-            //:push-${target}
-
+            //${path}:push-${target}
     done
+    if [[ $image_prefix_alt ]]; then
+      bazel run \
+          --config=${ARCHITECTURE} \
+          --define container_prefix=${docker_prefix} \
+          --define image_prefix=${image_prefix_alt} \
+          --define container_tag=${docker_tag} \
+          //${path}:push-${target}
+    fi
+}
+
+for target in ${PUSH_TARGETS[@]}; do
+  push_target "" $target
 done
-
-# for the imagePrefix operator test
-if [[ $image_prefix_alt ]]; then
-    for target in ${PUSH_TARGETS[@]}; do
-
-        bazel run \
-            --config=${ARCHITECTURE} \
-            --define container_prefix=${docker_prefix} \
-            --define image_prefix=${image_prefix_alt} \
-            --define container_tag=${docker_tag} \
-            //:push-${target}
-
-    done
-fi
 
 rm -rf ${DIGESTS_DIR}/${ARCHITECTURE}
 mkdir -p ${DIGESTS_DIR}/${ARCHITECTURE}
