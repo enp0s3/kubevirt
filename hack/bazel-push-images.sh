@@ -54,7 +54,7 @@ function push_target() {
 }
 
 if [ "${PUSH_OTHER_IMAGES}" == "true" ]; then
-  container_disk_images=(
+  container_disk_images=(\
     alpine-container-disk-image \
     cirros-container-disk-image \
     cirros-custom-container-disk-image \
@@ -65,11 +65,30 @@ if [ "${PUSH_OTHER_IMAGES}" == "true" ]; then
     fedora-realtime \
   )
 
-
   for target in ${container_disk_images[@]} ; do
     push_target "containerimages" $target
   done
 
+ cmd_images=(\
+  example-hook-sidecar-image \
+  example-disk-mutation-hook-sidecar-image \
+  example-cloudinit-hook-sidecar-image \
+ )
+
+  for target in ${cmd_images[@]} ; do
+    push_target "" $target
+  done
+
+  test_images=(\
+    disks-images-provider-image \
+    nfs-server-image \
+    vm-killer-image \
+    winrmcli-image \
+  )
+
+  for target in ${test_images[@]} ; do
+    push_target "" $target
+  done
 fi
 
 for target in ${PUSH_TARGETS[@]}; do
