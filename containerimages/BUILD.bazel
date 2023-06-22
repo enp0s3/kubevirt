@@ -183,7 +183,7 @@ container_image(
 container_push(
     name = "push-alpine-ext-kernel-boot-demo",
     format = "Docker",
-    image = ":alpine-ext-kernel-boot-demo-container",
+    image = ":alpine-ext-kernel-boot-demo-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)alpine-ext-kernel-boot-demo",
     tag = "$(container_tag)",
