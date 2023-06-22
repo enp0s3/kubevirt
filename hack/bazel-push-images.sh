@@ -55,7 +55,16 @@ function push_target() {
 }
 
 if [ "${PUSH_OTHER_IMAGES}" == "true" ]; then
-  for target in "alpine-container-disk-image cirros-container-disk-image cirros-custom-container-disk-image virtio-container-disk-image fedora-with-test-tooling alpine-with-test-tooling alpine-ext-kernel-boot-demo-container" ; do
+  container_disk_images=(
+  alpine-container-disk-image \
+  cirros-container-disk-image \
+  cirros-custom-container-disk-image \
+  virtio-container-disk-image \
+  fedora-with-test-tooling \
+  alpine-with-test-tooling \
+  alpine-ext-kernel-boot-demo-container \
+  )
+  for target in ${container_disk_images[@]} ; do
     push_target "containerimages" $target
   done
 fi
