@@ -499,7 +499,7 @@ go_library(
 container_push(
     name = "push-example-hook-sidecar",
     format = "Docker",
-    image = "//cmd/example-hook-sidecar:example-hook-sidecar",
+    image = "//cmd/example-hook-sidecar:example-hook-sidecar-image",
     registry = "$(container_prefix)",
     repository = "$(image_prefix)example-hook-sidecar",
     tag = "$(container_tag)",
