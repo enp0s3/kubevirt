@@ -51,6 +51,7 @@ func (CPUInstancetype) SwaggerDoc() map[string]string {
 		"numa":                  "NUMA allows specifying settings for the guest NUMA topology\n+optional",
 		"isolateEmulatorThread": "IsolateEmulatorThread requests one more dedicated pCPU to be allocated for the VMI to place\nthe emulator thread on it.\n+optional",
 		"realtime":              "Realtime instructs the virt-launcher to tune the VMI for lower latency, optional for real time workloads\n+optional",
+		"maxSockets":            "The maximum amount of sockets that can be hot-plugged to the Virtual Machine\n+optional",
 	}
 }
 

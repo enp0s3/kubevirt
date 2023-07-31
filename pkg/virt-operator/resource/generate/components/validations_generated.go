@@ -7881,6 +7881,11 @@ var CRDsValidation map[string]string = map[string]string{
               description: IsolateEmulatorThread requests one more dedicated pCPU
                 to be allocated for the VMI to place the emulator thread on it.
               type: boolean
+            maxSockets:
+              description: The maximum amount of sockets that can be hot-plugged to
+                the Virtual Machine
+              format: int32
+              type: integer
             model:
               description: Model specifies the CPU model inside the VMI. List of available
                 models https://github.com/libvirt/libvirt/tree/master/src/cpu_map.
@@ -16720,6 +16725,11 @@ var CRDsValidation map[string]string = map[string]string{
               description: IsolateEmulatorThread requests one more dedicated pCPU
                 to be allocated for the VMI to place the emulator thread on it.
               type: boolean
+            maxSockets:
+              description: The maximum amount of sockets that can be hot-plugged to
+                the Virtual Machine
+              format: int32
+              type: integer
             model:
               description: Model specifies the CPU model inside the VMI. List of available
                 models https://github.com/libvirt/libvirt/tree/master/src/cpu_map.

@@ -27346,6 +27346,13 @@ func schema_kubevirtio_api_instancetype_v1beta1_CPUInstancetype(ref common.Refer
 							Ref:         ref("kubevirt.io/api/core/v1.Realtime"),
 						},
 					},
+					"maxSockets": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The maximum amount of sockets that can be hot-plugged to the Virtual Machine",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 				Required: []string{"guest"},
 			},
