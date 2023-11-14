@@ -5005,6 +5005,24 @@ var _ = Describe("VirtualMachine", func() {
 					vmi := controller.setupVMIFromVM(vm)
 					Expect(vmi.Spec.Domain.CPU.MaxSockets).To(Equal(defaultSockets * 4))
 				})
+
+				It("should stage changes when exceeding calculated maximum sockets", func() {
+					vm, _ := DefaultVirtualMachine(true)
+					vm.Spec.LiveUpdateFeatures = &virtv1.LiveUpdateFeatures{
+						CPU: &virtv1.LiveUpdateCPU{},
+					}
+					cpu := virtv1.CPU{
+						Sockets: 5,
+					}
+					vm.Spec.Template.Spec.Domain.CPU = &cpu
+
+					vmi := api.NewMinimalVMI(vm.Name)
+					vmi.Spec.Domain.CPU = &cpu
+					vmi.Spec.Domain.CPU.MaxSockets = 5
+
+					err := controller.handleCPUChangeRequest(vm, vmi)
+					Expect(err).ToNot(HaveOccurred())
+				})
 			})
 
 			Context("Memory", func() {

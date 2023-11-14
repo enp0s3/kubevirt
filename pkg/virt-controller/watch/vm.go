@@ -650,6 +650,13 @@ func (c *VMController) handleCPUChangeRequest(vm *virtv1.VirtualMachine, vmi *vi
 		return nil
 	}
 
+	if c.clusterConfig.GetMaximumCpuSockets() == 0 &&
+		vm.Spec.LiveUpdateFeatures.CPU.MaxSockets == nil {
+		if vm.Spec.Template.Spec.Domain.CPU.Sockets > vmi.Spec.Domain.CPU.MaxSockets {
+			return nil
+		}
+	}
+
 	vmiConditions := controller.NewVirtualMachineInstanceConditionManager()
 	if vmiConditions.HasConditionWithStatus(vmi, virtv1.VirtualMachineInstanceVCPUChange, k8score.ConditionTrue) {
 		return fmt.Errorf("another CPU hotplug is in progress")
