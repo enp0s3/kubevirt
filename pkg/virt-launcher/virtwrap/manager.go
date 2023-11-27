@@ -1034,6 +1034,8 @@ func (l *LibvirtDomainManager) SyncVMI(vmi *v1.VirtualMachineInstance, allowEmul
 	logger := log.Log.Object(vmi)
 
 	domain := &api.Domain{}
+	domain.Spec.Name = api.VMINamespaceKeyFunc(vmi)
+	domain.Spec.SysInfo = &api.SysInfo{}
 
 	c, err := l.generateConverterContext(vmi, allowEmulation, options, false)
 	if err != nil {
@@ -1041,18 +1043,23 @@ func (l *LibvirtDomainManager) SyncVMI(vmi *v1.VirtualMachineInstance, allowEmul
 		return nil, err
 	}
 
-	if err := converter.Convert_v1_VirtualMachineInstance_To_api_Domain(vmi, domain, c); err != nil {
-		logger.Error("Conversion failed.")
-		return nil, err
-	}
-
 	// Set defaults which are not coming from the cluster
 	api.NewDefaulter(c.Architecture).SetObjectDefaults_Domain(domain)
+
+	//if err := converter.Convert_v1_VirtualMachineInstance_To_api_Domain(vmi, domain, c); err != nil {
+	//	logger.Error("Conversion failed.")
+	//	return nil, err
+	//}
 
 	dom, err := l.virConn.LookupDomainByName(domain.Spec.Name)
 	if err != nil {
 		// We need the domain but it does not exist, so create it
 		if domainerrors.IsNotFound(err) {
+			if err := converter.Convert_v1_VirtualMachineInstance_To_api_Domain(vmi, domain, c); err != nil {
+				logger.Reason(err).Error("Conversion failed.")
+				return nil, err
+			}
+
 			domain, err = l.preStartHook(vmi, domain, false, options)
 			if err != nil {
 				logger.Reason(err).Error("pre start setup for VirtualMachineInstance failed.")
@@ -1079,7 +1086,9 @@ func (l *LibvirtDomainManager) SyncVMI(vmi *v1.VirtualMachineInstance, allowEmul
 			return nil, err
 		}
 	}
+
 	defer dom.Free()
+
 	domState, _, err := dom.GetState()
 	if err != nil {
 		logger.Reason(err).Error(failedGetDomainState)
@@ -1121,6 +1130,16 @@ func (l *LibvirtDomainManager) SyncVMI(vmi *v1.VirtualMachineInstance, allowEmul
 	if err != nil {
 		logger.Reason(err).Error("Parsing domain XML failed.")
 		return nil, err
+	}
+
+	if len(domain.Spec.Devices.Disks) == 0 {
+		ioTreadPlacer := converter.NewIOThreadsPlacer(vmi)
+		disks, err := converter.CerateDomainDisks(vmi, ioTreadPlacer, c)
+		if err != nil {
+			logger.Reason(err).Error("Converting domain disks failed.")
+			return nil, err
+		}
+		domain.Spec.Devices.Disks = append(domain.Spec.Devices.Disks, disks...)
 	}
 
 	// Look up all the disks to detach
@@ -1188,6 +1207,15 @@ func (l *LibvirtDomainManager) SyncVMI(vmi *v1.VirtualMachineInstance, allowEmul
 		var domainAttachments map[string]string
 		if options != nil {
 			domainAttachments = options.GetInterfaceDomainAttachment()
+		}
+
+		if len(domain.Spec.Devices.Interfaces) == 0 {
+			domainInterfaces, err := converter.CreateDomainInterfaces(vmi, domain, c)
+			if err != nil {
+				logger.Reason(err).Error("failed to parse domain network interfaces.")
+				return nil, err
+			}
+			domain.Spec.Devices.Interfaces = append(domain.Spec.Devices.Interfaces, domainInterfaces...)
 		}
 
 		networkInterfaceManager := newVirtIOInterfaceManager(
