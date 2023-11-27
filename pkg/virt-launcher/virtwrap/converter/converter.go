@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"kubevirt.io/kubevirt/pkg/pointer"
 	"os"
 	"os/exec"
 	"path/filepath"

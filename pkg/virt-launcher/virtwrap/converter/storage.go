@@ -82,6 +82,14 @@ func NewIOThreadsPlacer(vmi *v1.VirtualMachineInstance) *IOThreadsPlacer {
 	return &iotp
 }
 
+func (iotp *IOThreadsPlacer) IOThreadCount() uint {
+	return uint(iotp.autoThreads + iotp.dedicatedThreads)
+}
+
+func (iotp *IOThreadsPlacer) CurrentAutoThread() uint {
+	return iotp.currentAutoThread
+}
+
 func (iotp *IOThreadsPlacer) SetIOThreadToDisk(vmiDisk *v1.Disk, newDisk *api.Disk, c *ConverterContext) {
 	if _, ok := c.HotplugVolumes[vmiDisk.Name]; !ok {
 		if vmiDisk.DedicatedIOThread != nil && *vmiDisk.DedicatedIOThread {
@@ -98,7 +106,7 @@ func (iotp *IOThreadsPlacer) SetIOThreadToDisk(vmiDisk *v1.Disk, newDisk *api.Di
 	}
 }
 
-func CerateDomainDisks(vmi *v1.VirtualMachineInstance, c *ConverterContext) ([]api.Disk, error) {
+func CerateDomainDisks(vmi *v1.VirtualMachineInstance, ioThreadPlacer *IOThreadsPlacer, c *ConverterContext) ([]api.Disk, error) {
 	var domainDisks []api.Disk
 
 	cpuTopology := vcpu.GetCPUTopology(vmi)
@@ -128,11 +136,6 @@ func CerateDomainDisks(vmi *v1.VirtualMachineInstance, c *ConverterContext) ([]a
 	}
 
 	useIOThreads := UseIOThreads(vmi)
-	var ioThreadPlacer *IOThreadsPlacer
-	if useIOThreads {
-		ioThreadPlacer = NewIOThreadsPlacer(vmi)
-	}
-
 	prefixMap := newDeviceNamer(vmi.Status.VolumeStatus, vmi.Spec.Domain.Devices.Disks)
 	for _, disk := range vmi.Spec.Domain.Devices.Disks {
 		newDisk := api.Disk{}
