@@ -100,9 +100,7 @@ func (cc *ConcurrentCollector) collectFromSource(scraper MetricsScraper, wg *syn
 	defer wg.Done()
 	defer cc.releaseKey(socket)
 
-	log.Log.V(4).Infof("Getting stats from source %s", socket)
 	scraper.Scrape(socket, vmi)
-	log.Log.V(4).Infof("Updated stats from source %s", socket)
 }
 
 func (cc *ConcurrentCollector) reserveKey(key string) bool {
