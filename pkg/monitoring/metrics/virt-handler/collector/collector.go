@@ -90,7 +90,6 @@ func (cc *ConcurrentCollector) Collect(vmis []*k6tv1.VirtualMachineInstance, scr
 		completed = false
 	}
 
-	log.Log.V(4).Infof("Collection completed")
 	scraper.Complete()
 
 	return skipped, completed
