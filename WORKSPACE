@@ -390,6 +390,12 @@ oci_pull(
 )
 
 oci_pull(
+    name = "alpine_with_test_tooling_aarch64",
+    digest = "sha256:96bc536631473d1edef2a7e5ca757986a59abc6f8519c917aca3c9a9af4b0c00",
+    image = "quay.io/kubevirtci/alpine-with-test-tooling-container-disk",
+)
+
+oci_pull(
     name = "fedora_with_test_tooling_aarch64",
     digest = "sha256:3d5a2a95f7f9382dc6730073fe19a6b1bc668b424c362339c88c6a13dff2ef49",
     image = "quay.io/kubevirtci/fedora-with-test-tooling",
